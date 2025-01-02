@@ -7,6 +7,14 @@ include_directories(
         ${PROJECT_SOURCE_DIR}/include
         ${PROJECT_SOURCE_DIR}/src
 	${parent_path}/Core/include
+	${parent_path}/Graphics/include
+	${parent_path}/Graphics/Resources/include
+	${parent_path}/Graphics/Resources/Vulkan-Hpp
+	${parent_path}/Graphics/Resources/Vulkan-Hpp/Vulkan-Headers/include
+)
+
+link_directories(
+	${parent_path}/Graphics/Resources/lib
 )
 
 file(GLOB all_SRCS
@@ -17,4 +25,4 @@ file(GLOB all_SRCS
         )
 
 add_executable(Sandbox ${all_SRCS})
-target_link_libraries(Sandbox PRIVATE Core Graphics Physics Network)
+target_link_libraries(Sandbox Core)
