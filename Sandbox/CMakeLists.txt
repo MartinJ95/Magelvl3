@@ -7,10 +7,7 @@ include_directories(
         ${PROJECT_SOURCE_DIR}/include
         ${PROJECT_SOURCE_DIR}/src
 	${parent_path}/Core/include
-	${parent_path}/Graphics/include
-	${parent_path}/Graphics/Resources/include
-	${parent_path}/Graphics/Resources/Vulkan-Hpp
-	${parent_path}/Graphics/Resources/Vulkan-Hpp/Vulkan-Headers/include
+	${additional_includes}
 )
 
 link_directories(

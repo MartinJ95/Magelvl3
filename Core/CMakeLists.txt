@@ -6,10 +6,8 @@ cmake_path(GET cur_path PARENT_PATH parent_path)
 include_directories(
         ${PROJECT_SOURCE_DIR}/include
         ${PROJECT_SOURCE_DIR}/src
-	${parent_path}/Graphics/include
-	${parent_path}/Graphics/Resources/include
-	${parent_path}/Graphics/Resources/Vulkan-Hpp
-	${parent_path}/Graphics/Resources/Vulkan-Hpp/Vulkan-Headers/include
+	${additional_includes}
+
 )
 
 file(GLOB all_SRCS

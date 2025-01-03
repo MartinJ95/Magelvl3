@@ -1,28 +1,10 @@
 project(Graphics)
 
-set(graphics_to_use "vulkan")
-
-set(all_includes 
-	${PROJECT_SOURCE_DIR}/include
+include_directories(
+        ${PROJECT_SOURCE_DIR}/include
 	${PROJECT_SOURCE_DIR}/src
 	${PROJECT_SOURCE_DIR}/Resources/include
-)
-if("${graphics_to_use}" STREQUAL "vulkan")
-list(APPEND all_includes
-	${PROJECT_SOURCE_DIR}/include/vulkan
-        ${PROJECT_SOURCE_DIR}/src/vulkan
-	${PROJECT_SOURCE_DIR}/Resources/Vulkan-Hpp
-	${PROJECT_SOURCE_DIR}/Resources/Vulkan-Hpp/Vulkan-Headers/include
-)
-elseif("${graphics_to_use}" STREQUAL "none")
-list(APPEND all_includes
-	${PROJECT_SOURCE_DIR}/include/none
-        ${PROJECT_SOURCE_DIR}/src/none
-)
-endif()
-
-include_directories(
-        ${all_includes}
+	${additional_includes}
 )
 
 link_directories(
