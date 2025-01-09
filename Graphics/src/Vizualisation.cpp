@@ -9,10 +9,9 @@ Vizualisation::Vizualisation(int Width, int Height) :
 
 void Vizualisation::Render()
 {
-    m_renderer.Render();
+    m_renderer.Render({0});
 }
 
 Vizualisation::~Vizualisation()
 {
-   
 }

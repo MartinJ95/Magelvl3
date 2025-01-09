@@ -42,4 +42,4 @@ find_package(Vulkan REQUIRED)
 add_subdirectory(Resources/Vulkan-Hpp/glm EXCLUDE_FROM_ALL)
 
 add_library(Graphics ${all_SRCS})
-target_link_libraries(Graphics glfw3 glslangd glslang-default-resource-limitsd SPIRVd MachineIndependentd OGLCompilerd OSDependentd GenericCodeGend Vulkan::Vulkan glm utils)
+target_link_libraries(Graphics glfw3 glslangd glslang-default-resource-limitsd SPIRVd MachineIndependentd OGLCompilerd OSDependentd GenericCodeGend Vulkan::Vulkan glm utils Utilities)
