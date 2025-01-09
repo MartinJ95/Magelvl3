@@ -18,12 +18,13 @@ set(additional_includes
 )
 elseif("${graphics_to_use}" STREQUAL "none")
 set(additional_includes
+${PROJECT_SOURCE_DIR}/Graphics/include
 	${PROJECT_SOURCE_DIR}/Graphics/include/none
         ${PROJECT_SOURCE_DIR}/Graphics/src/none
 )
 endif()
 
-add_subdirectory(Utils)
+add_subdirectory(Utilities)
 add_subdirectory(Graphics)
 add_subdirectory(Physics)
 add_subdirectory(Network)
