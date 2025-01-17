@@ -7,9 +7,17 @@ Vizualisation::Vizualisation(int Width, int Height) :
    
 }
 
+void Vizualisation::AddToRenderQueue(const Vector3& position)
+{
+}
+
 void Vizualisation::Render()
 {
-    m_renderer.Render({0});
+    while (!m_renderer.WindowShouldClose())
+    {
+        m_renderer.PollEvents();
+        m_renderer.Render();
+    }
 }
 
 Vizualisation::~Vizualisation()

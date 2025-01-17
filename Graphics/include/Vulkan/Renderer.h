@@ -6,6 +6,7 @@
 #include "../samples/utils/utils.hpp"
 #include "glslang/SPIRV/GlslangToSpv.h"
 #include "glslang/Public/ShaderLang.h"
+#include "Vector.h"
 
 #include <iostream>
 #include <thread>
@@ -30,6 +31,7 @@ struct GraphicsModel
 		m_vertexBufferData = std::move(Data);
 	}
 	vk::su::BufferData m_vertexBufferData;
+	unsigned int m_renderingPassId;
 };
 
 struct GraphicsRenderPass
@@ -62,7 +64,10 @@ class Renderer
 {
 public:
 	Renderer(int Width, int Height);
-	void Render(const std::vector<int> &Models);
+	void AddToRenderQueue(const unsigned int RenderPass, const Vector3 Pos);
+	void Render();
+	bool WindowShouldClose();
+	void PollEvents();
 	~Renderer();
 public:
 	vk::Instance m_vulkanInstance;
@@ -75,7 +80,7 @@ public:
 	vk::Queue m_graphicsQueue;
 	vk::Queue m_presentQueue;
 	vk::su::SwapChainData m_swapChainData;
-	std::vector<GraphicsModel> m_modelDatas;
+	std::unordered_map<unsigned int, GraphicsModel> m_modelDatas;
 	std::unordered_map<unsigned int, std::queue<glm::mat4x4>> m_renderingTargets;
 	std::unordered_map<unsigned int, GraphicsRenderPass> m_renderPasses;
 
