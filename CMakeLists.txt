@@ -10,6 +10,7 @@ set(graphics_to_use "vulkan")
 if("${graphics_to_use}" STREQUAL "vulkan")
 set(additional_includes
 	${PROJECT_SOURCE_DIR}/Graphics/include
+	${PROJECT_SOURCE_DIR}/Utilities/include
 	${PROJECT_SOURCE_DIR}/Graphics/Resources/include
 	${PROJECT_SOURCE_DIR}/Graphics/include/vulkan
         ${PROJECT_SOURCE_DIR}/Graphics/src/vulkan
@@ -18,7 +19,7 @@ set(additional_includes
 )
 elseif("${graphics_to_use}" STREQUAL "none")
 set(additional_includes
-${PROJECT_SOURCE_DIR}/Graphics/include
+	${PROJECT_SOURCE_DIR}/Graphics/include
 	${PROJECT_SOURCE_DIR}/Graphics/include/none
         ${PROJECT_SOURCE_DIR}/Graphics/src/none
 )
