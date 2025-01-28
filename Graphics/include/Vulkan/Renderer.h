@@ -11,6 +11,7 @@
 #include <iostream>
 #include <thread>
 #include <queue>
+#include <stack>
 
 constexpr char AppNameC[] = "01_InitInstance";
 constexpr char EngineNameC[] = "Vulkan.hpp";
@@ -37,8 +38,8 @@ struct GraphicsModel
 struct GraphicsRenderPass
 {
 	GraphicsRenderPass(const vk::PhysicalDevice& PhysicalDevice, const vk::Device &Device, const vk::su::SurfaceData &SurfaceData, const vk::su::SwapChainData &SwapChainData);
-	void SetUniformDataModelViewProjection(const vk::su::SurfaceData& SurfaceData, const vk::Device& Device, const glm::vec3& position);
-	vk::ResultValue<uint32_t> OnRenderStart(const glm::mat4x4& Transform, const vk::Device& Device, vk::su::SwapChainData& SwapChainData, vk::CommandBuffer& CommandBuffer, vk::su::SurfaceData& SurfaceData);
+	void SetUniformDataModelViewProjection(const vk::su::SurfaceData& SurfaceData, const vk::PhysicalDevice& PhysicalDevice, const vk::Device& Device, const glm::mat4x4& ModelMatrix, const glm::mat4x4& CamMatrix);
+	vk::ResultValue<uint32_t> OnRenderStart(const vk::Device& Device, vk::su::SwapChainData& SwapChainData, vk::CommandBuffer& CommandBuffer, vk::su::SurfaceData& SurfaceData);
 	void OnRenderObj(const vk::CommandBuffer& CommandBuffer, const vk::su::BufferData& Data, const vk::ResultValue<uint32_t>& ResultValue, const vk::su::SurfaceData& SurfaceData);
 	void OnRenderFinish(const vk::ResultValue<uint32_t>& CurrentBuffer, const vk::CommandBuffer& CommandBuffer, const vk::Device& Device, const vk::su::SwapChainData& SwapChainData, const vk::Queue& GraphicsQueue, const vk::Queue& PresentQueue);
 	~GraphicsRenderPass();
@@ -54,6 +55,8 @@ struct GraphicsRenderPass
 	vk::DescriptorSetLayout m_descriptorSetLayout;
 	vk::DescriptorPool m_descriptorPool;
 	vk::DescriptorSet m_descriptorSet;
+	std::stack<vk::su::BufferData> m_modelMatrices;
+	std::stack<vk::DescriptorSet> m_descriptorSets;
 	vk::PipelineCache m_pipelineCache;
 	vk::Pipeline m_pipeline;
 	vk::Semaphore imageAcquiredSemaphore;
@@ -83,5 +86,5 @@ public:
 	std::unordered_map<unsigned int, GraphicsModel> m_modelDatas;
 	std::unordered_map<unsigned int, std::queue<glm::mat4x4>> m_renderingTargets;
 	std::unordered_map<unsigned int, GraphicsRenderPass> m_renderPasses;
-
+	glm::mat4x4 m_camMatrix = glm::mat4x4(1);
 };

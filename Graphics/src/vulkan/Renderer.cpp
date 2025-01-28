@@ -20,17 +20,24 @@ m_vulkanInstance(
             m_graphicsAndPresentQueueFamilyIndex.first,
             vk::su::getDeviceExtensions())),
     m_pool(
-        m_device.createCommandPool(
+        m_device.createCommandPool
+        (
+            vk::CommandPoolCreateInfo
             {
-                {},
-                m_graphicsAndPresentQueueFamilyIndex.first })),
-                m_commandBuffer(
-                    m_device.allocateCommandBuffers(
-                        vk::CommandBufferAllocateInfo(
-                            m_pool,
-                            vk::CommandBufferLevel::ePrimary,
-                            1)).front()
-                ),
+                vk::CommandPoolCreateFlags{VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT},
+                m_graphicsAndPresentQueueFamilyIndex.first ,
+
+            }
+        )
+    ),
+    m_commandBuffer(
+        m_device.allocateCommandBuffers(
+              vk::CommandBufferAllocateInfo(
+              m_pool,
+              vk::CommandBufferLevel::ePrimary,
+              1)
+        ).front()
+    ),
     m_graphicsQueue(
         m_device.getQueue(
             m_graphicsAndPresentQueueFamilyIndex.first, 0)),
@@ -105,16 +112,69 @@ m_vulkanInstance(
     }
 }
 
-void GraphicsRenderPass::SetUniformDataModelViewProjection(const vk::su::SurfaceData &SurfaceData, const vk::Device &Device, const glm::vec3& position)
+void Renderer::AddToRenderQueue(const unsigned int RenderPass, const Vector3 Pos)
+{
+
+    glm::mat4x4 transform(1);
+
+    transform = glm::translate(transform, glm::vec3(Pos.x, Pos.y, Pos.z));
+
+    m_renderingTargets.at(RenderPass).emplace(transform);
+}
+
+void GraphicsRenderPass::SetUniformDataModelViewProjection(const vk::su::SurfaceData &SurfaceData, const vk::PhysicalDevice& PhysicalDevice, const vk::Device &Device, const glm::mat4x4& ModelMatrix, const glm::mat4x4& CamMatrix)
 {
     m_mvpcMatrix = vk::su::createModelViewProjectionClipMatrix(SurfaceData.extent);
 
-    vk::su::copyToDevice(Device, m_uniformBuffer.deviceMemory, m_mvpcMatrix);
+    glm::mat4x4 testMat = vk::su::createModelViewProjectionClipMatrix(SurfaceData.extent);
 
-    vk::su::updateDescriptorSets(Device, m_descriptorSet, { { vk::DescriptorType::eUniformBuffer, m_uniformBuffer.buffer, VK_WHOLE_SIZE, {} } }, {});
+    glm::mat4x4 viewMatrix = glm::inverse(CamMatrix);
+
+    glm::mat4x4 xMatrix = glm::inverse(
+        glm::mat4x4(
+            1, 0, 0, 0,
+            0, -1, 0, 0,
+            0, 0, -1, 0,
+            0, 0, 0, 1
+        )
+    );
+
+    float aspectRatio = SurfaceData.extent.height / SurfaceData.extent.width;
+
+    float fov = 45;
+
+    std::pair<float, float> nearfarplanes{ 0.1f,100.f };
+
+    glm::mat4x4 projectionMatrix = glm::perspective(fov, aspectRatio, nearfarplanes.first, nearfarplanes.second);
+    /*
+    glm::mat4x4 projectionMatrix = glm::mat4x4(
+        aspectRatio/tan(fov*0.5), 0, 0, 0,
+        0, 1/tan(fov*0.5), 0, 0,
+        0, 0, nearfarplanes.second/ nearfarplanes.first - nearfarplanes.second, -(nearfarplanes.first*nearfarplanes.second / nearfarplanes.second-nearfarplanes.first),
+        0, 0, 1, 0
+    );
+    */
+
+    m_mvpcMatrix = projectionMatrix * xMatrix * viewMatrix * ModelMatrix;
+
+    //m_mvpcMatrix = vk::su::createModelViewProjectionClipMatrix(SurfaceData.extent);
+
+    m_modelMatrices.emplace(vk::su::BufferData(
+        PhysicalDevice,
+        Device,
+        sizeof(glm::mat4),
+        vk::BufferUsageFlagBits::eUniformBuffer));
+    //vk::su::copyToDevice(Device, m_uniformBuffer.deviceMemory, m_mvpcMatrix);
+    vk::su::copyToDevice(Device, m_modelMatrices.top().deviceMemory, m_mvpcMatrix);
+
+    vk::DescriptorSetAllocateInfo descriptorSetAllocateInfo(m_descriptorPool, m_descriptorSetLayout);
+
+    //vk::su::updateDescriptorSets(Device, m_descriptorSet, { { vk::DescriptorType::eUniformBuffer, m_uniformBuffer.buffer, VK_WHOLE_SIZE, {} } }, {});
+    m_descriptorSets.emplace(Device.allocateDescriptorSets(descriptorSetAllocateInfo).front());
+    vk::su::updateDescriptorSets(Device, m_descriptorSets.top(), { { vk::DescriptorType::eUniformBuffer, m_modelMatrices.top().buffer, VK_WHOLE_SIZE, {} } }, {});
 }
 
-vk::ResultValue<uint32_t> GraphicsRenderPass::OnRenderStart(const glm::mat4x4& Transform, const vk::Device &Device, vk::su::SwapChainData &SwapChainData, vk::CommandBuffer &CommandBuffer, vk::su::SurfaceData &SurfaceData)
+vk::ResultValue<uint32_t> GraphicsRenderPass::OnRenderStart(const vk::Device &Device, vk::su::SwapChainData &SwapChainData, vk::CommandBuffer &CommandBuffer, vk::su::SurfaceData &SurfaceData)
 {
     imageAcquiredSemaphore = Device.createSemaphore(vk::SemaphoreCreateInfo());
     vk::ResultValue<uint32_t> currentBuffer = Device.acquireNextImageKHR(SwapChainData.swapChain, vk::su::FenceTimeout, imageAcquiredSemaphore, nullptr);
@@ -130,13 +190,15 @@ vk::ResultValue<uint32_t> GraphicsRenderPass::OnRenderStart(const glm::mat4x4& T
         m_renderPass, m_frameBuffers[currentBuffer.value], vk::Rect2D(vk::Offset2D(0, 0), SurfaceData.extent), clearValues);
     CommandBuffer.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
     CommandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline);
-    CommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipelineLayout, 0, m_descriptorSet, nullptr);
+    //CommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipelineLayout, 0, m_descriptorSet, nullptr);
 
     return currentBuffer;
 }
 
 void GraphicsRenderPass::OnRenderObj(const vk::CommandBuffer& CommandBuffer, const vk::su::BufferData& Data, const vk::ResultValue<uint32_t>& CurrentBuffer, const vk::su::SurfaceData& SurfaceData)
 {
+    CommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipelineLayout, 0, m_descriptorSets.top(), nullptr);
+
     CommandBuffer.bindVertexBuffers(0, Data.buffer,{0});
 
     CommandBuffer.setViewport(
@@ -167,12 +229,21 @@ void GraphicsRenderPass::OnRenderFinish(const vk::ResultValue<uint32_t> &Current
     case vk::Result::eSuboptimalKHR: std::cout << "vk::Queue::presentKHR returned vk::Result::eSuboptimalKHR !\n"; break;
     default: assert(false);  // an unexpected result is returned !
     }
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    //std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
     Device.waitIdle();
 
     Device.destroyFence(drawFence);
     Device.destroySemaphore(imageAcquiredSemaphore);
+
+    while (m_descriptorSets.size() > 0)
+    {
+        m_modelMatrices.top().clear(Device);
+        m_modelMatrices.pop();
+        m_descriptorSets.pop();
+    }
+
+    vkResetDescriptorPool(Device, m_descriptorPool, {});
 }
 
 GraphicsRenderPass::~GraphicsRenderPass()
@@ -181,17 +252,23 @@ GraphicsRenderPass::~GraphicsRenderPass()
 
 void Renderer::Render()
 {
+    static float rotation{0};
+    rotation += 0.001f;
+    m_camMatrix = glm::mat4x4(1);
+    m_camMatrix = glm::rotate(m_camMatrix, rotation, glm::vec3(0, 1, 0));
     for (auto& it : m_renderingTargets)
     {
+
+        vk::ResultValue<uint32_t> CurrentBuffer = m_renderPasses.at(it.first).OnRenderStart(m_device, m_swapChainData, m_commandBuffer, m_surfaceData);
         while (it.second.size() > 0)
         {
             glm::mat4x4 Transform = it.second.front();
             it.second.pop();
 
-            vk::ResultValue<uint32_t> CurrentBuffer = m_renderPasses.at(it.first).OnRenderStart(Transform, m_device, m_swapChainData, m_commandBuffer, m_surfaceData);
+            m_renderPasses.at(it.first).SetUniformDataModelViewProjection(m_surfaceData, m_physicalDevice, m_device, Transform, m_camMatrix);
             m_renderPasses.at(it.first).OnRenderObj(m_commandBuffer, m_modelDatas.at(0).m_vertexBufferData, CurrentBuffer, m_surfaceData);
-            m_renderPasses.at(it.first).OnRenderFinish(CurrentBuffer, m_commandBuffer, m_device, m_swapChainData, m_graphicsQueue, m_presentQueue);
         }
+        m_renderPasses.at(it.first).OnRenderFinish(CurrentBuffer, m_commandBuffer, m_device, m_swapChainData, m_graphicsQueue, m_presentQueue);
     }
   
 }
@@ -274,9 +351,10 @@ GraphicsRenderPass::GraphicsRenderPass(const vk::PhysicalDevice& PhysicalDevice,
     m_descriptorSetLayout = vk::su::createDescriptorSetLayout(Device, { { vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eVertex } });
 
     m_pipelineLayout = Device.createPipelineLayout(vk::PipelineLayoutCreateInfo(vk::PipelineLayoutCreateFlags(), m_descriptorSetLayout));
-
+    /*
     m_renderPass = vk::su::createRenderPass(
         Device, vk::su::pickSurfaceFormat(PhysicalDevice.getSurfaceFormatsKHR(SurfaceData.surface)).format, m_depthBufferData.format);
+    */
 
     glslang::InitializeProcess();
 
@@ -290,7 +368,7 @@ GraphicsRenderPass::GraphicsRenderPass(const vk::PhysicalDevice& PhysicalDevice,
     //vk::su::copyToDevice(m_device, m_vertexBufferData.deviceMemory, coloredCubeData, sizeof(coloredCubeData) / sizeof(coloredCubeData[0]));
     //vk::su::copyToDevice(m_device, m_models.at(0).m_vertexBufferData.deviceMemory, coloredCubeData, sizeof(coloredCubeData) / sizeof(coloredCubeData[0]));
 
-    m_descriptorPool = vk::su::createDescriptorPool(Device, { { vk::DescriptorType::eUniformBuffer, 1 } });
+    m_descriptorPool = vk::su::createDescriptorPool(Device, { { vk::DescriptorType::eUniformBuffer, 100000 } });
     vk::DescriptorSetAllocateInfo descriptorSetAllocateInfo(m_descriptorPool, m_descriptorSetLayout);
 
     m_descriptorSet = Device.allocateDescriptorSets(descriptorSetAllocateInfo).front();
