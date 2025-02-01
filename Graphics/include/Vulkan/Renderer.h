@@ -19,6 +19,13 @@ constexpr char EngineNameC[] = "Vulkan.hpp";
 static std::string AppName = "01_InitInstance";
 static std::string EngineName = "Vulkan.hpp";
 
+extern void (*InputFunction)(int, int, int, int);
+
+static void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+	InputFunction(key, scancode, action, mods);
+}
+
 struct GraphicsModel
 {
 	GraphicsModel(const vk::su::BufferData& Data) : m_vertexBufferData(Data) {}
@@ -68,8 +75,9 @@ class Renderer
 public:
 	Renderer(int Width, int Height);
 	void AddToRenderQueue(const unsigned int RenderPass, const Vector3 Pos);
+	void PositionCamera(const Vector3& Position, const Vector3& Rotation);
 	void Render();
-	bool WindowShouldClose();
+	bool WindowShouldClose() const;
 	void PollEvents();
 	~Renderer();
 public:
