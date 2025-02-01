@@ -1,25 +1,54 @@
 #include "ECS.h"
 
-ECS::ECS()
+ECS* EcsInstance = nullptr;
+
+ECS::ECS() : m_isRunning(false)
 {
+}
+
+void ECS::UpdateComponents(float DeltaTime)
+{
+	for (auto& container : m_compContainers)
+	{
+		for (int i = 0; i < container.second.m_data.size() / container.first;)
+		{
+			//static_cast<T>(container.second.m_data[i]).Update(DeltaTime);
+			Component* obj = (Component*)(&container.second.m_data[i]);
+			obj->Update(DeltaTime);
+			i += container.first;
+		}
+	}
+}
+
+void ECS::UpdateComponentsInput(const int Key, const int Scancode, const int Action, const int Mods)
+{
+	for (auto& container : m_compContainers)
+	{
+		for (int i = 0; i < container.second.m_data.size() / container.first;)
+		{
+			//static_cast<T>(container.second.m_data[i]).Update(DeltaTime);
+			Component* obj = (Component*)(&container.second.m_data[i]);
+			obj->OnInput(Key, Scancode, Action, Mods);
+			i += container.first;
+		}
+	}
+}
+
+void ECS::BeginPlay()
+{
+	m_isRunning = true;
+	for (auto& container : m_compContainers)
+	{
+		for (int i = 0; i < container.second.m_data.size() / container.first;)
+		{
+			//static_cast<T>(container.second.m_data[i]).Update(DeltaTime);
+			Component* obj = (Component*)(&container.second.m_data[i]);
+			obj->BeginPlay();
+			i += container.first;
+		}
+	}
 }
 
 ECContainer::ECContainer(int Stride) : m_stride(Stride), m_data(), m_entityToCompMap()
 {
-}
-
-void ECContainer::AddComponent(unsigned int Entity)
-{
-	if (m_entityToCompMap.find(Entity) != m_entityToCompMap.end())
-	{
-		return;
-	}
-
-	for (int i = 0; i < m_stride; i++)
-	{
-		m_data.emplace_back();
-	}
-
-
-	m_entityToCompMap.emplace(Entity, m_data.size() / m_stride);
 }
