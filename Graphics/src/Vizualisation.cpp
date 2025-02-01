@@ -1,9 +1,13 @@
 #include "Vizualisation.h"
 
+Vizualisation* VizInstance = nullptr;
+
+Renderer* RendererInstance = nullptr;
+
 Vizualisation::Vizualisation(int Width, int Height) :
     m_width(Width), m_height(Height), m_renderer(Width, Height)
 {
-
+    
    
 }
 
@@ -13,19 +17,13 @@ void Vizualisation::AddToRenderQueue(const Vector3& position)
 
 void Vizualisation::Render()
 {
-    while (!m_renderer.WindowShouldClose())
-    {
-        m_renderer.PollEvents();
-        m_renderer.AddToRenderQueue(0, Vector3(10, 0, 0));
-        m_renderer.AddToRenderQueue(0, Vector3(-10, 0, 0));
-        m_renderer.AddToRenderQueue(0, Vector3(0, 10, 0));
-        m_renderer.AddToRenderQueue(0, Vector3(0, -10, 0));
-        m_renderer.AddToRenderQueue(0, Vector3(0, 0, 10));
-        m_renderer.AddToRenderQueue(0, Vector3(0, 0, -10));
-        /*
-        */
-        m_renderer.Render();
-    }
+    m_renderer.PollEvents();
+    m_renderer.Render();
+}
+
+bool Vizualisation::WindowShouldClose() const
+{
+    return m_renderer.WindowShouldClose();
 }
 
 Vizualisation::~Vizualisation()
