@@ -1,5 +1,7 @@
 #include "Renderer.h"
 
+void (*InputFunction)(int, int, int, int) = NULL;
+
 constexpr vk::ApplicationInfo AppInfo(AppNameC, 1, EngineNameC, 1, VK_API_VERSION_1_1);
 
 Renderer::Renderer(int Width, int Height) :
@@ -110,6 +112,7 @@ m_vulkanInstance(
         std::cout << "unknown error\n";
         exit(-1);
     }
+    glfwSetKeyCallback(m_surfaceData.window.handle, KeyCallback);
 }
 
 void Renderer::AddToRenderQueue(const unsigned int RenderPass, const Vector3 Pos)
@@ -120,6 +123,19 @@ void Renderer::AddToRenderQueue(const unsigned int RenderPass, const Vector3 Pos
     transform = glm::translate(transform, glm::vec3(Pos.x, Pos.y, Pos.z));
 
     m_renderingTargets.at(RenderPass).emplace(transform);
+}
+
+void Renderer::PositionCamera(const Vector3& Position, const Vector3& Rotation)
+{
+    m_camMatrix = glm::mat4x4(1);
+
+    m_camMatrix = glm::translate(m_camMatrix, glm::vec3(Position.x, Position.y, Position.z));
+
+    m_camMatrix = glm::rotate(m_camMatrix, Rotation.x, glm::vec3(0, 1, 0));
+
+    m_camMatrix = glm::rotate(m_camMatrix, Rotation.y, glm::vec3(0, 0, 1));
+
+    m_camMatrix = glm::rotate(m_camMatrix, Rotation.z, glm::vec3(1, 0, 0));
 }
 
 void GraphicsRenderPass::SetUniformDataModelViewProjection(const vk::su::SurfaceData &SurfaceData, const vk::PhysicalDevice& PhysicalDevice, const vk::Device &Device, const glm::mat4x4& ModelMatrix, const glm::mat4x4& CamMatrix)
@@ -252,10 +268,10 @@ GraphicsRenderPass::~GraphicsRenderPass()
 
 void Renderer::Render()
 {
-    static float rotation{0};
-    rotation += 0.001f;
-    m_camMatrix = glm::mat4x4(1);
-    m_camMatrix = glm::rotate(m_camMatrix, rotation, glm::vec3(0, 1, 0));
+    //static float rotation{0};
+    //rotation += 0.001f;
+    //m_camMatrix = glm::mat4x4(1);
+    //m_camMatrix = glm::rotate(m_camMatrix, rotation, glm::vec3(0, 1, 0));
     for (auto& it : m_renderingTargets)
     {
 
@@ -273,7 +289,7 @@ void Renderer::Render()
   
 }
 
-bool Renderer::WindowShouldClose()
+bool Renderer::WindowShouldClose() const
 {
     return glfwWindowShouldClose(m_surfaceData.window.handle);
 }
