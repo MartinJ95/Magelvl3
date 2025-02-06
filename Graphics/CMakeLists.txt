@@ -24,6 +24,7 @@ list(APPEND all_files
         "${PROJECT_SOURCE_DIR}/include/vulkan/*.hpp"
 	"${PROJECT_SOURCE_DIR}/src/vulkan/*.cpp"
         "${PROJECT_SOURCE_DIR}/src/vulkan/*.c"
+	"$"
 )
 elseif("${graphics_to_use}" STREQUAL "none")
 list(APPEND all_files
@@ -38,8 +39,17 @@ file(GLOB all_SRCS
         ${all_files}
         )
 
+if("${graphics_to_use}" STREQUAL "vulkan")
+{
+
 find_package(Vulkan REQUIRED)
 add_subdirectory(Resources/Vulkan-Hpp/glm EXCLUDE_FROM_ALL)
 
 add_library(Graphics ${all_SRCS})
 target_link_libraries(Graphics glfw3 glslangd glslang-default-resource-limitsd SPIRVd MachineIndependentd OGLCompilerd OSDependentd GenericCodeGend Vulkan::Vulkan glm utils Utilities)
+}
+elseif("${graphics_to_use}" STREQUAL "none")
+{
+add_library(Graphics ${all_SRCS})
+target_lik_libraries(Utilities)
+}
