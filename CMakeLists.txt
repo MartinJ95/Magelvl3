@@ -5,7 +5,7 @@ project(Mage)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_C++_STANDARD_REQUIRED True)
 
-set(graphics_to_use "vulkan")
+set(graphics_to_use CACHE STRING "vulkan")
 
 if("${graphics_to_use}" STREQUAL "vulkan")
 set(additional_includes
