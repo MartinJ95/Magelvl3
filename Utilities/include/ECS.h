@@ -37,10 +37,14 @@ public:
 template<typename T>
 inline void ECS::RegisterComponent()
 {
+	/*
 	if (m_compContainers.find(sizeof(T)) != m_compContainers.end())
 	{
 		return;
 	}
+	*/
+
+	assert(m_compContainers.find(sizeof(T)) == m_compContainers.end());
 
 	m_compContainers.emplace(sizeof(T), sizeof(T));
 }
@@ -48,10 +52,14 @@ inline void ECS::RegisterComponent()
 template<typename T>
 inline void ECContainer::AddComponent(unsigned int Entity, bool IsRunning)
 {
+	/*
 	if (m_entityToCompMap.find(Entity) != m_entityToCompMap.end())
 	{
 		return;
 	}
+	*/
+
+	assert(m_entityToCompMap.find(Entity) == m_entityToCompMap.end());
 
 	for (int i = 0; i < m_stride; i++)
 	{
@@ -78,10 +86,13 @@ inline void ECContainer::AddComponent(unsigned int Entity, bool IsRunning)
 template<typename T>
 inline void ECS::AddComponent(unsigned int Entity)
 {
+	/*
 	if (m_compContainers.find(sizeof(T)) == m_compContainers.end())
 	{
 		return;
 	}
+	*/
+	assert(m_compContainers.find(sizeof(T)) != m_compContainers.end());
 
 	m_compContainers.find(sizeof(T))->second.AddComponent<T>(Entity, m_isRunning);
 }
