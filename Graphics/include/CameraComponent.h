@@ -78,26 +78,28 @@ struct MovementKey
 	bool m_keyDown;
 };
 
-constexpr float CamSpeed(0.01);
+constexpr float CamSpeed(10);
+constexpr float CamRotationSpeedScalar(10);
 
 class CameraComponent : public Component
 {
 public:
 	CameraComponent();
-	virtual void BeginPlay();
-	virtual void Update(float DeltaTime);
-	virtual void OnDestroy();
-	virtual void OnInput(const int Key, const int Scancode, const int Action, const int Mods);
+	void BeginPlay() override final;
+	void Update(float DeltaTime) override final;
+	void OnDestroy() override final;
+	void OnInput(const int Key, const int Scancode, const int Action, const int Mods) override final;
 private:
 	std::array<MovementKey, 6> m_keyMovementInputs = {
-		MovementKey(GLFW_KEY_W, Vector3(CamSpeed, 0, 0), m_position),
-		MovementKey(GLFW_KEY_S, Vector3(-CamSpeed, 0, 0), m_position),
-		MovementKey(GLFW_KEY_A, Vector3(0, 0, CamSpeed), m_position),
-		MovementKey(GLFW_KEY_D, Vector3(0, 0, -CamSpeed), m_position ),
-		MovementKey(GLFW_KEY_LEFT, Vector3(CamSpeed, 0, 0), m_rotation),
-		MovementKey(GLFW_KEY_RIGHT, Vector3(-CamSpeed, 0, 0), m_rotation)
+		MovementKey(GLFW_KEY_W, Vector3(0, 0, CamSpeed), m_position),
+		MovementKey(GLFW_KEY_S, Vector3(0, 0, -CamSpeed), m_position),
+		MovementKey(GLFW_KEY_A, Vector3(-CamSpeed, 0, 0), m_position),
+		MovementKey(GLFW_KEY_D, Vector3(CamSpeed, 0, 0), m_position ),
+		MovementKey(GLFW_KEY_LEFT, Vector3(0, -CamSpeed, 0), m_rotation),
+		MovementKey(GLFW_KEY_RIGHT, Vector3(0, CamSpeed, 0), m_rotation)
 	};
 	Vector3 m_position;
 	Vector3 m_rotation;
 	Vector3 m_FinalPosition;
+	Vector3 m_FinalRotation;
 };
