@@ -16,6 +16,7 @@ set(additional_includes
         ${PROJECT_SOURCE_DIR}/Graphics/src/vulkan
 	${PROJECT_SOURCE_DIR}/Graphics/Resources/Vulkan-Hpp
 	${PROJECT_SOURCE_DIR}/Graphics/Resources/Vulkan-Hpp/Vulkan-Headers/include
+	${PROJECT_SOURCE_DIR}/Graphics/Resources/include/imgui-1.91.8
 )
 elseif("${graphics_to_use}" STREQUAL "none")
 set(additional_includes
