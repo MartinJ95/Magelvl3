@@ -28,7 +28,7 @@ void Application::Initialise()
 	m_entCompSyst.AddComponent<CameraComponent>(0);
 
 	m_entCompSyst.RegisterComponent<ModelComponent>();
-	constexpr int stressTestNum = 6;
+	constexpr int stressTestNum = 50;
 	for (int i = 0; i < stressTestNum; i++)
 	{
 		for (int j = 0; j < stressTestNum; j++)
