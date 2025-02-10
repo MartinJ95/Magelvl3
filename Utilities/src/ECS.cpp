@@ -10,12 +10,12 @@ void ECS::UpdateComponents(float DeltaTime)
 {
 	for (auto& container : m_compContainers)
 	{
-		for (int i = 0; i < container.second.m_data.size() / container.first;)
+		for (int i = 0; i/container.first < container.second.m_data.size() / container.first; i+=container.first)
 		{
 			//static_cast<T>(container.second.m_data[i]).Update(DeltaTime);
 			Component* obj = (Component*)(&container.second.m_data[i]);
 			obj->Update(DeltaTime);
-			i += container.first;
+			//i += container.first;
 		}
 	}
 }
