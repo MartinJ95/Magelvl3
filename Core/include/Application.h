@@ -13,11 +13,12 @@ public:
 	ECS& GetECS() { return m_entCompSyst; }
 	~Application();
 	void Run();
-private:
+protected:
 	void Initialise();
 	void Update(float DeltaTime);
+	virtual void OnGUI() = 0;
 	void Render();
-private:
+protected:
 	Vizualisation m_viz;
 	ECS m_entCompSyst;
 };
