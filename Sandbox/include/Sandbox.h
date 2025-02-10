@@ -6,6 +6,7 @@ class Sandbox : public Application
 {
 public:
 	Sandbox();
+	void OnGUI() override final;
 private:
 };
 
