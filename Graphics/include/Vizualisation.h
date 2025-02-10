@@ -14,6 +14,7 @@ public:
 	void Render();
 	Renderer& GetRenderer() { return m_renderer; }
 	bool WindowShouldClose() const;
+	void OnGUIStart();
 	~Vizualisation();
 private:
 	int m_width = 500.f;
@@ -29,6 +30,10 @@ static void SetVizInstance(Vizualisation* Viz)
 	VizInstance = Viz;
 }
 
+static Vizualisation& GetVizInstance()
+{
+	return *VizInstance;
+}
 
 static void SetRendererInstance(Renderer* Renderer)
 {
