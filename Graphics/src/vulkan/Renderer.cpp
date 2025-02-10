@@ -58,12 +58,12 @@ m_vulkanInstance(
     m_modelDatas(
         {
             {
-            0,
-            std::move(vk::su::BufferData(m_physicalDevice,
-            m_device,
-            sizeof(coloredCubeData),
-            vk::BufferUsageFlagBits::eVertexBuffer))
-}           
+                0,
+                std::move(vk::su::BufferData(m_physicalDevice,
+                m_device,
+                sizeof(coloredCubeData),
+                vk::BufferUsageFlagBits::eVertexBuffer))
+            }
         }
     ),
     m_renderingTargets(
@@ -89,6 +89,27 @@ m_vulkanInstance(
 {
     try
     {
+        ImGui::CreateContext();
+        ImGuiIO& io = ImGui::GetIO(); (void)io;
+        io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+        io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+
+        ImGui_ImplGlfw_InitForVulkan(m_surfaceData.window.handle, true);
+        ImGui_ImplVulkan_InitInfo info = {};
+        info.Instance = m_vulkanInstance;
+        info.PhysicalDevice = m_physicalDevice;
+        info.Device = m_device;
+        info.DescriptorPool = m_renderPasses.at(0).m_descriptorPool;
+        info.DescriptorPoolSize = 0;
+        info.RenderPass = m_renderPasses.at(0).m_renderPass;
+        info.MinImageCount = 3;
+        info.ImageCount = 3;
+        info.QueueFamily = m_graphicsAndPresentQueueFamilyIndex.first;
+        info.Queue = m_graphicsQueue;
+        info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+
+        ImGui_ImplVulkan_Init(&info);
+
         m_renderingTargets.at(0).emplace(vk::su::createModelViewProjectionClipMatrix(
             m_surfaceData.extent));
         //vk::Instance instance = vk::su::createInstance(AppName, EngineName, {}, vk::su::getInstanceExtensions());
@@ -113,6 +134,10 @@ m_vulkanInstance(
         exit(-1);
     }
     glfwSetKeyCallback(m_surfaceData.window.handle, KeyCallback);
+    mainWindowData.Surface = m_surfaceData.surface;
+    //mainWindowData.Swapchain = m_renderPasses.at(0).
+    //mainWindowData.RenderPass = m_renderPasses.at(0).m_renderPass;
+    //ImGui_ImplVulkanH_CreateOrResizeWindow(m_vulkanInstance, m_physicalDevice, m_device, &mainWindowData, m_graphicsAndPresentQueueFamilyIndex.first, nullptr, m_surfaceData.extent.width, m_surfaceData.extent.height, 2);
 }
 
 void Renderer::AddToRenderQueue(const unsigned int RenderPass, const Vector3 Pos)
@@ -130,12 +155,13 @@ void Renderer::PositionCamera(const Vector3& Position, const Vector3& Rotation)
     m_camMatrix = glm::mat4x4(1);
 
     m_camMatrix = glm::translate(m_camMatrix, glm::vec3(Position.x, Position.y, Position.z));
+    
+    m_camMatrix = glm::rotate(m_camMatrix, glm::radians(Rotation.x), glm::vec3(1, 0, 0));
 
-    m_camMatrix = glm::rotate(m_camMatrix, Rotation.x, glm::vec3(0, 1, 0));
+    m_camMatrix = glm::rotate(m_camMatrix, glm::radians(Rotation.y), glm::vec3(0, 1, 0));
 
-    m_camMatrix = glm::rotate(m_camMatrix, Rotation.y, glm::vec3(0, 0, 1));
-
-    m_camMatrix = glm::rotate(m_camMatrix, Rotation.z, glm::vec3(1, 0, 0));
+    m_camMatrix = glm::rotate(m_camMatrix, glm::radians(Rotation.z), glm::vec3(0, 0, 1));
+    
 }
 
 void GraphicsRenderPass::SetUniformDataModelViewProjection(const vk::su::SurfaceData &SurfaceData, const vk::PhysicalDevice& PhysicalDevice, const vk::Device &Device, const glm::mat4x4& ModelMatrix, const glm::mat4x4& CamMatrix)
@@ -174,20 +200,37 @@ void GraphicsRenderPass::SetUniformDataModelViewProjection(const vk::su::Surface
     m_mvpcMatrix = projectionMatrix * xMatrix * viewMatrix * ModelMatrix;
 
     //m_mvpcMatrix = vk::su::createModelViewProjectionClipMatrix(SurfaceData.extent);
-
+    /*
     m_modelMatrices.emplace(vk::su::BufferData(
         PhysicalDevice,
         Device,
         sizeof(glm::mat4),
         vk::BufferUsageFlagBits::eUniformBuffer));
+    */
     //vk::su::copyToDevice(Device, m_uniformBuffer.deviceMemory, m_mvpcMatrix);
-    vk::su::copyToDevice(Device, m_modelMatrices.top().deviceMemory, m_mvpcMatrix);
 
-    vk::DescriptorSetAllocateInfo descriptorSetAllocateInfo(m_descriptorPool, m_descriptorSetLayout);
+    unsigned int currentBuffer = 0;
+    currentBuffer = m_usedModelsAmount++;
+    /*
+    for (int i = 0; i < ModelBufferAmount; i++)
+    {
+        if (m_usedModels.find(i) == m_usedModels.end())
+        {
+            currentBuffer = i;
+            m_usedModels.emplace(i);
+            break;
+        }
+    }
+    */
+
+    vk::su::copyToDevice(Device, m_modelBuffers.at(currentBuffer).deviceMemory, m_mvpcMatrix);
+
+    //vk::DescriptorSetAllocateInfo descriptorSetAllocateInfo(m_descriptorPool, m_descriptorSetLayout);
 
     //vk::su::updateDescriptorSets(Device, m_descriptorSet, { { vk::DescriptorType::eUniformBuffer, m_uniformBuffer.buffer, VK_WHOLE_SIZE, {} } }, {});
-    m_descriptorSets.emplace(Device.allocateDescriptorSets(descriptorSetAllocateInfo).front());
-    vk::su::updateDescriptorSets(Device, m_descriptorSets.top(), { { vk::DescriptorType::eUniformBuffer, m_modelMatrices.top().buffer, VK_WHOLE_SIZE, {} } }, {});
+    //m_descriptorSets.emplace(Device.allocateDescriptorSets(descriptorSetAllocateInfo).front());
+    //vk::su::updateDescriptorSets(Device, m_descriptorSets.top(), { { vk::DescriptorType::eUniformBuffer, m_modelBuffers.at(currentBuffer).buffer, VK_WHOLE_SIZE, {}}}, {});
+    vk::su::updateDescriptorSets(Device, m_descriptorSets.at(currentBuffer), {{vk::DescriptorType::eUniformBuffer, m_modelBuffers.at(currentBuffer).buffer, VK_WHOLE_SIZE, {}}}, {});
 }
 
 vk::ResultValue<uint32_t> GraphicsRenderPass::OnRenderStart(const vk::Device &Device, vk::su::SwapChainData &SwapChainData, vk::CommandBuffer &CommandBuffer, vk::su::SurfaceData &SurfaceData)
@@ -213,7 +256,7 @@ vk::ResultValue<uint32_t> GraphicsRenderPass::OnRenderStart(const vk::Device &De
 
 void GraphicsRenderPass::OnRenderObj(const vk::CommandBuffer& CommandBuffer, const vk::su::BufferData& Data, const vk::ResultValue<uint32_t>& CurrentBuffer, const vk::su::SurfaceData& SurfaceData)
 {
-    CommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipelineLayout, 0, m_descriptorSets.top(), nullptr);
+    CommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipelineLayout, 0, m_descriptorSets.at(m_usedModelsAmount-1), nullptr);
 
     CommandBuffer.bindVertexBuffers(0, Data.buffer,{0});
 
@@ -252,18 +295,33 @@ void GraphicsRenderPass::OnRenderFinish(const vk::ResultValue<uint32_t> &Current
     Device.destroyFence(drawFence);
     Device.destroySemaphore(imageAcquiredSemaphore);
 
+    //m_usedModels.clear();
+    m_usedModelsAmount = 0;
+    /*
     while (m_descriptorSets.size() > 0)
     {
-        m_modelMatrices.top().clear(Device);
-        m_modelMatrices.pop();
+        //m_modelMatrices.top().clear(Device);
+        //m_modelMatrices.pop();
         m_descriptorSets.pop();
     }
+    */
 
-    vkResetDescriptorPool(Device, m_descriptorPool, {});
+    //need to allocate descriptors again after resetting
+    //vkResetDescriptorPool(Device, m_descriptorPool, {});
+}
+
+void GraphicsRenderPass::CleanUp(const vk::Device& Device)
+{
+    for (auto& it : m_modelBuffers)
+    {
+        it.clear(Device);
+    }
+    //m_modelBuffer.clear(Device);
 }
 
 GraphicsRenderPass::~GraphicsRenderPass()
 {
+    
 }
 
 void Renderer::Render()
@@ -284,9 +342,25 @@ void Renderer::Render()
             m_renderPasses.at(it.first).SetUniformDataModelViewProjection(m_surfaceData, m_physicalDevice, m_device, Transform, m_camMatrix);
             m_renderPasses.at(it.first).OnRenderObj(m_commandBuffer, m_modelDatas.at(0).m_vertexBufferData, CurrentBuffer, m_surfaceData);
         }
+        ImGui_ImplVulkan_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        //ImGui::GetIO().DisplaySize = ImVec2(100, 100);
+        ImGui::NewFrame();
+        ImGui::Begin("first attempt");
+        //if (ImGui::BeginMenu("File"))
+        //{
+        //    if (ImGui::MenuItem("open")) {}
+        //}
+        //ImGui::EndMenu();
+        static glm::vec4 my_color{ 0 };
+        if (ImGui::ColorEdit4("Color", (float*)&my_color)) {}
+        ImGui::End();
+        ImGui::Render();
+        ImGui::EndFrame();
+        //works but doesnt at same time
+        //ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), m_commandBuffer);
         m_renderPasses.at(it.first).OnRenderFinish(CurrentBuffer, m_commandBuffer, m_device, m_swapChainData, m_graphicsQueue, m_presentQueue);
     }
-  
 }
 
 bool Renderer::WindowShouldClose() const
@@ -299,9 +373,33 @@ void Renderer::PollEvents()
     glfwPollEvents();
 }
 
+void Renderer::OnGUIStart()
+{
+    //ImGui_ImplVulkan_InitInfo info;
+    //ImGui_ImplVulkan_Init(&info);
+    /*
+    ImGui::NewFrame();
+    ImGui::Begin("first attempt");
+    if (ImGui::BeginMenu("File"))
+    {
+        if (ImGui::MenuItem("open")) {}
+    }
+    static glm::vec4 my_color{ 0 };
+    if (ImGui::ColorEdit4("Color", (float*)&my_color)) {}
+    ImGui::EndMenuBar();
+    ImGui::End();
+    ImGui::EndFrame();
+    */
+    
+}
+
 Renderer::~Renderer()
 {
     /* VULKAN_KEY_END */
+
+    ImGui_ImplVulkan_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
 
     for (auto& it : m_modelDatas)
     {
@@ -312,6 +410,7 @@ Renderer::~Renderer()
         m_device.destroyPipeline(it.second.m_pipeline);
         m_device.destroyPipelineCache(it.second.m_pipelineCache);
         m_device.destroyDescriptorPool(it.second.m_descriptorPool);
+        it.second.CleanUp(m_device);
         
 
         for (auto &framebuffer : it.second.m_frameBuffers)
@@ -360,8 +459,22 @@ GraphicsRenderPass::GraphicsRenderPass(const vk::PhysicalDevice& PhysicalDevice,
         PhysicalDevice,
         Device,
         sizeof(glm::mat4),
-        vk::BufferUsageFlagBits::eUniformBuffer))
+        vk::BufferUsageFlagBits::eUniformBuffer)),
+    m_modelBuffers({vk::su::BufferData(
+        PhysicalDevice,
+        Device,
+        sizeof(glm::mat4),
+        vk::BufferUsageFlagBits::eUniformBuffer)})
 {
+    m_modelBuffers.reserve(ModelBufferAmount);
+    m_descriptorSets.reserve(ModelBufferAmount);
+    /*
+    m_modelBuffers.fill(vk::su::BufferData(
+        PhysicalDevice,
+        Device,
+        sizeof(glm::mat4),
+        vk::BufferUsageFlagBits::eUniformBuffer));
+    */
     vk::su::copyToDevice(Device, m_uniformBuffer.deviceMemory, m_mvpcMatrix);
 
     m_descriptorSetLayout = vk::su::createDescriptorSetLayout(Device, { { vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eVertex } });
@@ -383,9 +496,20 @@ GraphicsRenderPass::GraphicsRenderPass(const vk::PhysicalDevice& PhysicalDevice,
 
     //vk::su::copyToDevice(m_device, m_vertexBufferData.deviceMemory, coloredCubeData, sizeof(coloredCubeData) / sizeof(coloredCubeData[0]));
     //vk::su::copyToDevice(m_device, m_models.at(0).m_vertexBufferData.deviceMemory, coloredCubeData, sizeof(coloredCubeData) / sizeof(coloredCubeData[0]));
-
-    m_descriptorPool = vk::su::createDescriptorPool(Device, { { vk::DescriptorType::eUniformBuffer, 100000 } });
+    m_descriptorPoolSize = 130000;
+    m_descriptorPool = vk::su::createDescriptorPool(Device, { { vk::DescriptorType::eUniformBuffer, 130000 } });
     vk::DescriptorSetAllocateInfo descriptorSetAllocateInfo(m_descriptorPool, m_descriptorSetLayout);
+    
+    m_descriptorSets.emplace_back(Device.allocateDescriptorSets(descriptorSetAllocateInfo).front());
+    for (int i = 0; i < ModelBufferAmount; i++)
+    {
+        m_modelBuffers.emplace_back(vk::su::BufferData(
+            PhysicalDevice,
+            Device,
+            sizeof(glm::mat4),
+            vk::BufferUsageFlagBits::eUniformBuffer));
+        m_descriptorSets.emplace_back(Device.allocateDescriptorSets(descriptorSetAllocateInfo).front());
+    }
 
     m_descriptorSet = Device.allocateDescriptorSets(descriptorSetAllocateInfo).front();
 

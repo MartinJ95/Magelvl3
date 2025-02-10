@@ -7,6 +7,11 @@
 #include "glslang/SPIRV/GlslangToSpv.h"
 #include "glslang/Public/ShaderLang.h"
 #include "Vector.h"
+#include "RendererSpec.h"
+
+#include "imgui.h"
+#include "imgui-1.91.8/backends/imgui_impl_glfw.h"
+#include "imgui-1.91.8/backends/imgui_impl_vulkan.h"
 
 #include <iostream>
 #include <thread>
@@ -42,6 +47,8 @@ struct GraphicsModel
 	unsigned int m_renderingPassId;
 };
 
+constexpr unsigned int ModelBufferAmount = 125000;
+
 struct GraphicsRenderPass
 {
 	GraphicsRenderPass(const vk::PhysicalDevice& PhysicalDevice, const vk::Device &Device, const vk::su::SurfaceData &SurfaceData, const vk::su::SwapChainData &SwapChainData);
@@ -49,6 +56,7 @@ struct GraphicsRenderPass
 	vk::ResultValue<uint32_t> OnRenderStart(const vk::Device& Device, vk::su::SwapChainData& SwapChainData, vk::CommandBuffer& CommandBuffer, vk::su::SurfaceData& SurfaceData);
 	void OnRenderObj(const vk::CommandBuffer& CommandBuffer, const vk::su::BufferData& Data, const vk::ResultValue<uint32_t>& ResultValue, const vk::su::SurfaceData& SurfaceData);
 	void OnRenderFinish(const vk::ResultValue<uint32_t>& CurrentBuffer, const vk::CommandBuffer& CommandBuffer, const vk::Device& Device, const vk::su::SwapChainData& SwapChainData, const vk::Queue& GraphicsQueue, const vk::Queue& PresentQueue);
+	void CleanUp(const vk::Device& Device);
 	~GraphicsRenderPass();
 	std::vector<unsigned int> m_modelID;
 	glm::mat4x4 m_mvpcMatrix;
@@ -61,24 +69,27 @@ struct GraphicsRenderPass
 	vk::PipelineLayout m_pipelineLayout;
 	vk::DescriptorSetLayout m_descriptorSetLayout;
 	vk::DescriptorPool m_descriptorPool;
+	uint32_t m_descriptorPoolSize;
 	vk::DescriptorSet m_descriptorSet;
-	std::stack<vk::su::BufferData> m_modelMatrices;
-	std::stack<vk::DescriptorSet> m_descriptorSets;
+	std::vector<vk::su::BufferData> m_modelBuffers;
+	unsigned int m_usedModelsAmount{0};
+	std::vector<vk::DescriptorSet> m_descriptorSets;
 	vk::PipelineCache m_pipelineCache;
 	vk::Pipeline m_pipeline;
 	vk::Semaphore imageAcquiredSemaphore;
 };
 
 
-class Renderer
+class Renderer : public RendererSpec
 {
 public:
 	Renderer(int Width, int Height);
-	void AddToRenderQueue(const unsigned int RenderPass, const Vector3 Pos);
-	void PositionCamera(const Vector3& Position, const Vector3& Rotation);
-	void Render();
-	bool WindowShouldClose() const;
-	void PollEvents();
+	void AddToRenderQueue(const unsigned int RenderPass, const Vector3 Pos) override final;
+	void PositionCamera(const Vector3& Position, const Vector3& Rotation) override final;
+	void Render() override final;
+	bool WindowShouldClose() const override final;
+	void PollEvents() override final;
+	void OnGUIStart();
 	~Renderer();
 public:
 	vk::Instance m_vulkanInstance;
@@ -95,4 +106,5 @@ public:
 	std::unordered_map<unsigned int, std::queue<glm::mat4x4>> m_renderingTargets;
 	std::unordered_map<unsigned int, GraphicsRenderPass> m_renderPasses;
 	glm::mat4x4 m_camMatrix = glm::mat4x4(1);
+	ImGui_ImplVulkanH_Window mainWindowData;
 };
