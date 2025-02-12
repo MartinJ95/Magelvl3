@@ -58,6 +58,6 @@ if("${graphics_to_use}" STREQUAL "vulkan")
 elseif("${graphics_to_use}" STREQUAL "none")
 
 	add_library(Graphics ${all_SRCS})
-	target_lik_libraries(Utilities)
+	target_link_libraries(Utilities)
 
 endif()

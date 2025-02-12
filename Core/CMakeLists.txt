@@ -18,4 +18,4 @@ file(GLOB all_SRCS
         )
 
 add_library(Core ${all_SRCS})
-target_link_libraries(Core Graphics)
+target_link_libraries(Core Graphics Physics)

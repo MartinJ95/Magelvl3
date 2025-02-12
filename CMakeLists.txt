@@ -10,6 +10,8 @@ set(graphics_to_use CACHE STRING "vulkan")
 if("${graphics_to_use}" STREQUAL "vulkan")
 set(additional_includes
 	${PROJECT_SOURCE_DIR}/Graphics/include
+	${PROJECT_SOURCE_DIR}/Physics/include
+	${PROJECT_SOURCE_DIR}/Physics/src
 	${PROJECT_SOURCE_DIR}/Utilities/include
 	${PROJECT_SOURCE_DIR}/Graphics/Resources/include
 	${PROJECT_SOURCE_DIR}/Graphics/include/vulkan
@@ -23,6 +25,8 @@ set(additional_includes
 	${PROJECT_SOURCE_DIR}/Graphics/include
 	${PROJECT_SOURCE_DIR}/Graphics/include/none
         ${PROJECT_SOURCE_DIR}/Graphics/src/none
+	${PROJECT_SOURCE_DIR}/Physics/include
+	${PROJECT_SOURCE_DIR}/Physics/src
 )
 endif()
 
