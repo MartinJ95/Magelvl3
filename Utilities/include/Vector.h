@@ -16,3 +16,10 @@ public:
 public:
 	float x, y, z;
 };
+
+static const Vector3 UpVector{ 0.f,1.f,0.f };
+static const Vector3 DownVector{ 0.f, -1.f, 0 };
+static const Vector3 ForwardVector{ 0, 0, 1 };
+static const Vector3 BackVector{ 0.f, 0.f, -1 };
+static const Vector3 RightVector{ 1, 0, 0 };
+static const Vector3 LeftVector{ -1, 0, 0 };
