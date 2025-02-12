@@ -5,13 +5,14 @@
 class ServiceLocator
 {
 public:
-	ServiceLocator(Application& App) : m_appRef(App), m_vizRef(App.GetVizualisation())
+	ServiceLocator(Application& App) : m_appRef(App), m_vizRef(App.GetVizualisation()), m_PhysicsRef(App.GetPhysics())
 	{
 		SetVizInstance(&m_vizRef);
 		//VizInstance = &m_vizRef;
 		SetRendererInstance(&m_vizRef.GetRenderer());
 		//RendererInstance = &m_vizRef.GetRenderer();
 		SetEcsInstance(&App.GetECS());
+		InitPhysicsInstance(m_PhysicsRef);
 	}
 	Application& GetApp() { return m_appRef; }
 	Vizualisation& GetVizualisation() { return m_vizRef; }
@@ -19,6 +20,7 @@ public:
 private:
 	Application& m_appRef;
 	Vizualisation& m_vizRef;
+	Physics& m_PhysicsRef;
 };
 
 static ServiceLocator* Instance = nullptr;

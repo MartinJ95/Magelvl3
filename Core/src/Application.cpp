@@ -1,8 +1,10 @@
 #include "Application.h"
 #include "CameraComponent.h"
 #include "ModelComponent.h"
+#include "Transform.h"
 #include "ServiceLocator.h"
 #include "ctime"
+#include "RigidBody.h"
 
 Application::Application()
 {
@@ -28,7 +30,9 @@ void Application::Initialise()
 	m_entCompSyst.AddComponent<CameraComponent>(0);
 
 	m_entCompSyst.RegisterComponent<ModelComponent>();
-	constexpr int stressTestNum = 50;
+	m_entCompSyst.RegisterComponent<Transform>();
+	m_entCompSyst.RegisterComponent<RigidBody>();
+	constexpr int stressTestNum = 20;
 	for (int i = 0; i < stressTestNum; i++)
 	{
 		for (int j = 0; j < stressTestNum; j++)
@@ -36,8 +40,10 @@ void Application::Initialise()
 			for (int k = 0; k < stressTestNum; k++)
 			{
 				int index = k + j * stressTestNum + i * (stressTestNum * stressTestNum);
+				m_entCompSyst.AddComponent<Transform>(index);
 				m_entCompSyst.AddComponent<ModelComponent>(index);
-				m_entCompSyst.FindComponent<ModelComponent>(index).SetPosition(Vector3(-stressTestNum * 0.5 + i * stressTestNum, -stressTestNum * 0.5 + j * stressTestNum, -stressTestNum * 0.5 + k * stressTestNum));
+				m_entCompSyst.FindComponent<Transform>(index).SetPosition(Vector3(-stressTestNum * 0.5 + i * stressTestNum, -stressTestNum * 0.5 + j * stressTestNum, -stressTestNum * 0.5 + k * stressTestNum));
+				m_entCompSyst.AddComponent<RigidBody>(index);
 			}
 		}
 	}
@@ -50,7 +56,8 @@ void Application::Update(float DeltaTime)
 		static float DTime{ DeltaTime };
 		std::clock_t start = std::clock();
 		m_entCompSyst.UpdateComponents(DTime);
-		Render();
+		Render(DTime);
+		m_entCompSyst.LateUpdate();
 		double ms = (std::clock() - start) / (double)(CLOCKS_PER_SEC / 1000);
 		std::cout << "Time: " << ms << " ms" << std::endl;
 		std::cout << "FPS: " << (ms * 1000) * 60 << std::endl;
@@ -58,9 +65,9 @@ void Application::Update(float DeltaTime)
 	}
 }
 
-void Application::Render()
+void Application::Render(const float DeltaTime)
 {
-	m_viz.Render();
+	m_viz.Render(DeltaTime);
 	OnGUI();
 }
 
