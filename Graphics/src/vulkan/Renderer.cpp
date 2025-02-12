@@ -85,11 +85,12 @@ m_vulkanInstance(
                     m_swapChainData
                 }
             }
-        })
+        }),
+    m_guiPass(m_physicalDevice, m_device, m_surfaceData, m_graphicsAndPresentQueueFamilyIndex, m_swapChainData)
 {
     try
     {
-        ImGui::CreateContext();
+        //ImGui::CreateContext();
         ImGuiIO& io = ImGui::GetIO(); (void)io;
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
@@ -99,9 +100,9 @@ m_vulkanInstance(
         info.Instance = m_vulkanInstance;
         info.PhysicalDevice = m_physicalDevice;
         info.Device = m_device;
-        info.DescriptorPool = m_renderPasses.at(0).m_descriptorPool;
+        info.DescriptorPool = m_guiPass.m_descriptorPool;
         info.DescriptorPoolSize = 0;
-        info.RenderPass = m_renderPasses.at(0).m_renderPass;
+        info.RenderPass = m_guiPass.m_renderPass;
         info.MinImageCount = 3;
         info.ImageCount = 3;
         info.QueueFamily = m_graphicsAndPresentQueueFamilyIndex.first;
@@ -164,10 +165,8 @@ void Renderer::PositionCamera(const Vector3& Position, const Vector3& Rotation)
     
 }
 
-void GraphicsRenderPass::SetUniformDataModelViewProjection(const vk::su::SurfaceData &SurfaceData, const vk::PhysicalDevice& PhysicalDevice, const vk::Device &Device, const glm::mat4x4& ModelMatrix, const glm::mat4x4& CamMatrix)
+glm::mat4 GraphicsRenderPass::GetViewProjectionMatrix(const vk::su::SurfaceData& SurfaceData, const glm::mat4& CamMatrix)
 {
-    m_mvpcMatrix = vk::su::createModelViewProjectionClipMatrix(SurfaceData.extent);
-
     glm::mat4x4 testMat = vk::su::createModelViewProjectionClipMatrix(SurfaceData.extent);
 
     glm::mat4x4 viewMatrix = glm::inverse(CamMatrix);
@@ -181,7 +180,7 @@ void GraphicsRenderPass::SetUniformDataModelViewProjection(const vk::su::Surface
         )
     );
 
-    float aspectRatio = SurfaceData.extent.height / SurfaceData.extent.width;
+    float aspectRatio = SurfaceData.extent.width / SurfaceData.extent.height;
 
     float fov = 45;
 
@@ -197,7 +196,18 @@ void GraphicsRenderPass::SetUniformDataModelViewProjection(const vk::su::Surface
     );
     */
 
-    m_mvpcMatrix = projectionMatrix * xMatrix * viewMatrix * ModelMatrix;
+    glm::mat4 projectionViewMatrix = projectionMatrix * xMatrix * viewMatrix;
+
+    return projectionViewMatrix;
+}
+
+void GraphicsRenderPass::SetUniformDataModelViewProjection(const glm::mat4& projectionViewMatrix, const vk::su::SurfaceData &SurfaceData, const vk::PhysicalDevice& PhysicalDevice, const vk::Device &Device, const glm::mat4x4& ModelMatrix, const glm::mat4x4& CamMatrix)
+{
+    //m_mvpcMatrix = vk::su::createModelViewProjectionClipMatrix(SurfaceData.extent);
+
+    
+
+    m_mvpcMatrix = projectionViewMatrix * ModelMatrix;
 
     //m_mvpcMatrix = vk::su::createModelViewProjectionClipMatrix(SurfaceData.extent);
     /*
@@ -222,6 +232,7 @@ void GraphicsRenderPass::SetUniformDataModelViewProjection(const vk::su::Surface
         }
     }
     */
+    
 
     vk::su::copyToDevice(Device, m_modelBuffers.at(currentBuffer).deviceMemory, m_mvpcMatrix);
 
@@ -243,13 +254,15 @@ vk::ResultValue<uint32_t> GraphicsRenderPass::OnRenderStart(const vk::Device &De
     CommandBuffer.begin(vk::CommandBufferBeginInfo(vk::CommandBufferUsageFlags()));
 
     std::array<vk::ClearValue, 2> clearValues;
-    clearValues[0].color = vk::ClearColorValue(0.2f, 0.2f, 0.2f, 0.2f);
+    clearValues[0].color = vk::ClearColorValue(0.2f, 0.2f, 0.4f, 0.2f);
     clearValues[1].depthStencil = vk::ClearDepthStencilValue(1.0f, 0);
     vk::RenderPassBeginInfo renderPassBeginInfo(
         m_renderPass, m_frameBuffers[currentBuffer.value], vk::Rect2D(vk::Offset2D(0, 0), SurfaceData.extent), clearValues);
     CommandBuffer.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
     CommandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline);
     //CommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipelineLayout, 0, m_descriptorSet, nullptr);
+
+    
 
     return currentBuffer;
 }
@@ -269,6 +282,9 @@ void GraphicsRenderPass::OnRenderObj(const vk::CommandBuffer& CommandBuffer, con
 
 void GraphicsRenderPass::OnRenderFinish(const vk::ResultValue<uint32_t> &CurrentBuffer, const vk::CommandBuffer& CommandBuffer, const vk::Device &Device, const vk::su::SwapChainData &SwapChainData, const vk::Queue &GraphicsQueue, const vk::Queue &PresentQueue)
 {
+    
+    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), CommandBuffer);
+
     CommandBuffer.endRenderPass();
     CommandBuffer.end();
 
@@ -330,35 +346,40 @@ void Renderer::Render()
     //rotation += 0.001f;
     //m_camMatrix = glm::mat4x4(1);
     //m_camMatrix = glm::rotate(m_camMatrix, rotation, glm::vec3(0, 1, 0));
+    
+    ImGui_ImplVulkan_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    //ImGui::GetIO().DisplaySize = ImVec2(100, 100);
+    ImGui::NewFrame();
+    ImGui::Begin("first attempt");
+    //if (ImGui::BeginMenu("File"))
+    //{
+    //    if (ImGui::MenuItem("open")) {}
+    //}
+    //ImGui::EndMenu();
+    static glm::vec4 my_color{ 0 };
+    if (ImGui::ColorEdit4("Color", (float*)&my_color)) {}
+    ImGui::End();
+    ImGui::ShowDemoWindow();
+    ImGui::Render();
+    ImGui::EndFrame();
+    
+    //works but doesnt at same time
+    //ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), m_commandBuffer);
     for (auto& it : m_renderingTargets)
     {
 
         vk::ResultValue<uint32_t> CurrentBuffer = m_renderPasses.at(it.first).OnRenderStart(m_device, m_swapChainData, m_commandBuffer, m_surfaceData);
+        glm::mat4 viewProjection = m_renderPasses.at(it.first).GetViewProjectionMatrix(m_surfaceData, m_camMatrix);
         while (it.second.size() > 0)
         {
             glm::mat4x4 Transform = it.second.front();
             it.second.pop();
 
-            m_renderPasses.at(it.first).SetUniformDataModelViewProjection(m_surfaceData, m_physicalDevice, m_device, Transform, m_camMatrix);
+            m_renderPasses.at(it.first).SetUniformDataModelViewProjection(viewProjection, m_surfaceData, m_physicalDevice, m_device, Transform, m_camMatrix);
             m_renderPasses.at(it.first).OnRenderObj(m_commandBuffer, m_modelDatas.at(0).m_vertexBufferData, CurrentBuffer, m_surfaceData);
         }
-        ImGui_ImplVulkan_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
-        //ImGui::GetIO().DisplaySize = ImVec2(100, 100);
-        ImGui::NewFrame();
-        ImGui::Begin("first attempt");
-        //if (ImGui::BeginMenu("File"))
-        //{
-        //    if (ImGui::MenuItem("open")) {}
-        //}
-        //ImGui::EndMenu();
-        static glm::vec4 my_color{ 0 };
-        if (ImGui::ColorEdit4("Color", (float*)&my_color)) {}
-        ImGui::End();
-        ImGui::Render();
-        ImGui::EndFrame();
-        //works but doesnt at same time
-        //ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), m_commandBuffer);
+        
         m_renderPasses.at(it.first).OnRenderFinish(CurrentBuffer, m_commandBuffer, m_device, m_swapChainData, m_graphicsQueue, m_presentQueue);
     }
 }
@@ -460,11 +481,7 @@ GraphicsRenderPass::GraphicsRenderPass(const vk::PhysicalDevice& PhysicalDevice,
         Device,
         sizeof(glm::mat4),
         vk::BufferUsageFlagBits::eUniformBuffer)),
-    m_modelBuffers({vk::su::BufferData(
-        PhysicalDevice,
-        Device,
-        sizeof(glm::mat4),
-        vk::BufferUsageFlagBits::eUniformBuffer)})
+    m_modelBuffers()
 {
     m_modelBuffers.reserve(ModelBufferAmount);
     m_descriptorSets.reserve(ModelBufferAmount);
@@ -496,11 +513,11 @@ GraphicsRenderPass::GraphicsRenderPass(const vk::PhysicalDevice& PhysicalDevice,
 
     //vk::su::copyToDevice(m_device, m_vertexBufferData.deviceMemory, coloredCubeData, sizeof(coloredCubeData) / sizeof(coloredCubeData[0]));
     //vk::su::copyToDevice(m_device, m_models.at(0).m_vertexBufferData.deviceMemory, coloredCubeData, sizeof(coloredCubeData) / sizeof(coloredCubeData[0]));
-    m_descriptorPoolSize = 130000;
-    m_descriptorPool = vk::su::createDescriptorPool(Device, { { vk::DescriptorType::eUniformBuffer, 130000 } });
+    m_descriptorPoolSize = ModelBufferAmount;
+    m_descriptorPool = vk::su::createDescriptorPool(Device, { { vk::DescriptorType::eUniformBuffer, ModelBufferAmount + 100 } });
     vk::DescriptorSetAllocateInfo descriptorSetAllocateInfo(m_descriptorPool, m_descriptorSetLayout);
     
-    m_descriptorSets.emplace_back(Device.allocateDescriptorSets(descriptorSetAllocateInfo).front());
+    //m_descriptorSets.emplace_back(Device.allocateDescriptorSets(descriptorSetAllocateInfo).front());
     for (int i = 0; i < ModelBufferAmount; i++)
     {
         m_modelBuffers.emplace_back(vk::su::BufferData(
@@ -527,4 +544,44 @@ GraphicsRenderPass::GraphicsRenderPass(const vk::PhysicalDevice& PhysicalDevice,
         true,
         m_pipelineLayout,
         m_renderPass);
+}
+
+GuiRenderPass::GuiRenderPass(const vk::PhysicalDevice& PhysicalDevice, const vk::Device& Device, const vk::su::SurfaceData& SurfaceData, std::pair<uint32_t, uint32_t>& GraphicsAndPresentQueueFamilyIndex, const vk::su::SwapChainData& SwapChainData) :
+    m_depthBufferData(vk::su::DepthBufferData(
+        PhysicalDevice,
+        Device,
+        vk::Format::eD16Unorm,
+        SurfaceData.extent)),
+    m_renderPass(vk::su::createRenderPass(
+        Device,
+        vk::su::pickSurfaceFormat(
+            PhysicalDevice.getSurfaceFormatsKHR(
+                SurfaceData.surface)).format,
+        m_depthBufferData.format)
+    ),
+    m_commandBuffer(
+        Device.allocateCommandBuffers(
+            vk::CommandBufferAllocateInfo(
+                Device.createCommandPool
+                (
+                    vk::CommandPoolCreateInfo
+                    {
+                        vk::CommandPoolCreateFlags{VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT},
+                        GraphicsAndPresentQueueFamilyIndex.first ,
+                    }
+                    ),
+                vk::CommandBufferLevel::ePrimary,
+                1)
+        ).front()
+    )
+{
+    ImGui::CreateContext();
+    m_descriptorPool = vk::su::createDescriptorPool(Device, { { vk::DescriptorType::eUniformBuffer, ModelBufferAmount + 100 } });
+    m_frameBuffers = vk::su::createFramebuffers(Device, m_renderPass, SwapChainData.imageViews, m_depthBufferData.imageView, SurfaceData.extent);
+    /*
+    m_commandBuffer.begin({ vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
+    ImGui_ImplVulkan_CreateFontsTexture();
+    m_commandBuffer.end();
+    */
+
 }
