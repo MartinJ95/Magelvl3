@@ -11,7 +11,7 @@ class Vizualisation
 public:
 	Vizualisation(int Width = 1280, int Height = 720);
 	void AddToRenderQueue(const Vector3& position);
-	void Render();
+	void Render(const float DeltaTime);
 	Renderer& GetRenderer() { return m_renderer; }
 	bool WindowShouldClose() const;
 	void OnGUIStart();

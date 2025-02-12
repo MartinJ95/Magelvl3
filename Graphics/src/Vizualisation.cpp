@@ -15,10 +15,10 @@ void Vizualisation::AddToRenderQueue(const Vector3& position)
 {
 }
 
-void Vizualisation::Render()
+void Vizualisation::Render(const float DeltaTime)
 {
     m_renderer.PollEvents();
-    m_renderer.Render();
+    m_renderer.Render(DeltaTime);
 }
 
 bool Vizualisation::WindowShouldClose() const
