@@ -20,6 +20,20 @@ void ECS::UpdateComponents(float DeltaTime)
 	}
 }
 
+void ECS::LateUpdate()
+{
+	for (auto& container : m_compContainers)
+	{
+		for (int i = 0; i / container.first < container.second.m_data.size() / container.first; i += container.first)
+		{
+			//static_cast<T>(container.second.m_data[i]).Update(DeltaTime);
+			Component* obj = (Component*)(&container.second.m_data[i]);
+			obj->LateUpdate();
+			//i += container.first;
+		}
+	}
+}
+
 void ECS::UpdateComponentsInput(const int Key, const int Scancode, const int Action, const int Mods)
 {
 	for (auto& container : m_compContainers)

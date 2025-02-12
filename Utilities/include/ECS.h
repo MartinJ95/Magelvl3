@@ -27,6 +27,7 @@ public:
 	template <typename T>
 	T& FindComponent(unsigned int Entity);
 	void UpdateComponents(float DeltaTime);
+	void LateUpdate();
 	void UpdateComponentsInput(const int Key, const int Scancode, const int Action, const int Mods);
 	void BeginPlay();
 public:
@@ -70,7 +71,7 @@ inline void ECContainer::AddComponent(unsigned int Entity, bool IsRunning)
 	//*base = T();
 
 	T obj{};
-
+	obj.AssignEntity(Entity);
 
 	memmove(&m_data[m_data.size() - m_stride], &obj, sizeof(T));
 
@@ -92,7 +93,7 @@ inline void ECS::AddComponent(unsigned int Entity)
 		return;
 	}
 	*/
-	assert(m_compContainers.find(sizeof(T)) != m_compContainers.end());
+	assert(m_compContainers.find(sizeof(T)) != m_compContainers.end(), "Forgot to register Component");
 
 	m_compContainers.find(sizeof(T))->second.AddComponent<T>(Entity, m_isRunning);
 }
