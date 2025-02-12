@@ -1,7 +1,9 @@
 #include "ModelComponent.h"
 #include "Vizualisation.h"
+#include "ECS.h"
+#include "Transform.h"
 
-ModelComponent::ModelComponent() : m_position(), m_rotation(), m_modelID(0)
+ModelComponent::ModelComponent() : /*m_position(), m_rotation(),*/ m_modelID(0)
 {
 }
 
@@ -12,8 +14,8 @@ void ModelComponent::BeginPlay()
 void ModelComponent::Update(float DeltaTime)
 {
 	Renderer& renderer = GetRenderer();
-
-	renderer.AddToRenderQueue(0, m_position);
+	renderer.AddToRenderQueue(0, GetEcsInstance().FindComponent<Transform>(m_entityID).GetPosition());
+	//renderer.AddToRenderQueue(0, m_position);
 }
 
 void ModelComponent::OnDestroy()
@@ -22,5 +24,6 @@ void ModelComponent::OnDestroy()
 
 void ModelComponent::SetPosition(const Vector3& Position)
 {
-	m_position = Position;
+	GetEcsInstance().FindComponent<Transform>(m_entityID).SetPosition(Position);
+	//m_position = Position;
 }

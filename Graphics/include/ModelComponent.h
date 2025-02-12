@@ -12,7 +12,7 @@ public:
 	virtual void OnDestroy();
 	void SetPosition(const Vector3& Position);
 private:
-	Vector3 m_position;
-	Vector3 m_rotation;
+	//Vector3 m_position;
+	//Vector3 m_rotation;
 	unsigned int m_modelID;
 };
