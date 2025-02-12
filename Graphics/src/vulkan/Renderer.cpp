@@ -1,5 +1,7 @@
 #include "Renderer.h"
 
+#include "PhysicsBase.h"
+
 void (*InputFunction)(int, int, int, int) = NULL;
 
 constexpr vk::ApplicationInfo AppInfo(AppNameC, 1, EngineNameC, 1, VK_API_VERSION_1_1);
@@ -201,7 +203,7 @@ glm::mat4 GraphicsRenderPass::GetViewProjectionMatrix(const vk::su::SurfaceData&
     return projectionViewMatrix;
 }
 
-void GraphicsRenderPass::SetUniformDataModelViewProjection(const glm::mat4& projectionViewMatrix, const vk::su::SurfaceData &SurfaceData, const vk::PhysicalDevice& PhysicalDevice, const vk::Device &Device, const glm::mat4x4& ModelMatrix, const glm::mat4x4& CamMatrix)
+void GraphicsRenderPass::SetUniformDataModelViewProjection(const glm::mat4& projectionViewMatrix, const vk::su::SurfaceData &SurfaceData, const vk::PhysicalDevice& PhysicalDevice, const vk::Device &Device, const glm::mat4x4& ModelMatrix, const glm::mat4x4& CamMatrix, const bool ShouldUpdate)
 {
     //m_mvpcMatrix = vk::su::createModelViewProjectionClipMatrix(SurfaceData.extent);
 
@@ -241,7 +243,10 @@ void GraphicsRenderPass::SetUniformDataModelViewProjection(const glm::mat4& proj
     //vk::su::updateDescriptorSets(Device, m_descriptorSet, { { vk::DescriptorType::eUniformBuffer, m_uniformBuffer.buffer, VK_WHOLE_SIZE, {} } }, {});
     //m_descriptorSets.emplace(Device.allocateDescriptorSets(descriptorSetAllocateInfo).front());
     //vk::su::updateDescriptorSets(Device, m_descriptorSets.top(), { { vk::DescriptorType::eUniformBuffer, m_modelBuffers.at(currentBuffer).buffer, VK_WHOLE_SIZE, {}}}, {});
-    vk::su::updateDescriptorSets(Device, m_descriptorSets.at(currentBuffer), {{vk::DescriptorType::eUniformBuffer, m_modelBuffers.at(currentBuffer).buffer, VK_WHOLE_SIZE, {}}}, {});
+    if (ShouldUpdate)
+    {
+        vk::su::updateDescriptorSets(Device, m_descriptorSets.at(currentBuffer), {{vk::DescriptorType::eUniformBuffer, m_modelBuffers.at(currentBuffer).buffer, VK_WHOLE_SIZE, {}}}, {});
+    }
 }
 
 vk::ResultValue<uint32_t> GraphicsRenderPass::OnRenderStart(const vk::Device &Device, vk::su::SwapChainData &SwapChainData, vk::CommandBuffer &CommandBuffer, vk::su::SurfaceData &SurfaceData)
@@ -340,13 +345,20 @@ GraphicsRenderPass::~GraphicsRenderPass()
     
 }
 
-void Renderer::Render()
+void Renderer::Render(const float DeltaTime)
 {
     //static float rotation{0};
     //rotation += 0.001f;
     //m_camMatrix = glm::mat4x4(1);
     //m_camMatrix = glm::rotate(m_camMatrix, rotation, glm::vec3(0, 1, 0));
     
+    m_upDateDescriptorTimer.first += DeltaTime;
+    if (m_upDateDescriptorTimer.first > m_upDateDescriptorTimer.second)
+    {
+        m_upDateDescriptorTimer.first = m_upDateDescriptorTimer.first - m_upDateDescriptorTimer.second;
+        m_shouldUpdateDescriptor = true;
+    }
+
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     //ImGui::GetIO().DisplaySize = ImVec2(100, 100);
@@ -359,6 +371,10 @@ void Renderer::Render()
     //ImGui::EndMenu();
     static glm::vec4 my_color{ 0 };
     if (ImGui::ColorEdit4("Color", (float*)&my_color)) {}
+    if (ImGui::SliderFloat("Gravity", &GetPhysicsInstance().m_gravityScale, -10, 10)) {}
+    if (ImGui::InputFloat3("World Dir",
+        (float*) & GetPhysicsInstance().m_downVec)) {
+    }
     ImGui::End();
     ImGui::ShowDemoWindow();
     ImGui::Render();
@@ -368,7 +384,8 @@ void Renderer::Render()
     //ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), m_commandBuffer);
     for (auto& it : m_renderingTargets)
     {
-
+        int lastUsed = -1;
+        int Current = 0;
         vk::ResultValue<uint32_t> CurrentBuffer = m_renderPasses.at(it.first).OnRenderStart(m_device, m_swapChainData, m_commandBuffer, m_surfaceData);
         glm::mat4 viewProjection = m_renderPasses.at(it.first).GetViewProjectionMatrix(m_surfaceData, m_camMatrix);
         while (it.second.size() > 0)
@@ -376,12 +393,13 @@ void Renderer::Render()
             glm::mat4x4 Transform = it.second.front();
             it.second.pop();
 
-            m_renderPasses.at(it.first).SetUniformDataModelViewProjection(viewProjection, m_surfaceData, m_physicalDevice, m_device, Transform, m_camMatrix);
+            m_renderPasses.at(it.first).SetUniformDataModelViewProjection(viewProjection, m_surfaceData, m_physicalDevice, m_device, Transform, m_camMatrix, m_shouldUpdateDescriptor);
             m_renderPasses.at(it.first).OnRenderObj(m_commandBuffer, m_modelDatas.at(0).m_vertexBufferData, CurrentBuffer, m_surfaceData);
         }
         
         m_renderPasses.at(it.first).OnRenderFinish(CurrentBuffer, m_commandBuffer, m_device, m_swapChainData, m_graphicsQueue, m_presentQueue);
     }
+    m_shouldUpdateDescriptor = false;
 }
 
 bool Renderer::WindowShouldClose() const

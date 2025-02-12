@@ -47,13 +47,13 @@ struct GraphicsModel
 	unsigned int m_renderingPassId;
 };
 
-constexpr unsigned int ModelBufferAmount = 10*10*10+10;
+constexpr unsigned int ModelBufferAmount = 50*50*50+10;
 
 struct GraphicsRenderPass
 {
 	GraphicsRenderPass(const vk::PhysicalDevice& PhysicalDevice, const vk::Device &Device, const vk::su::SurfaceData &SurfaceData, const vk::su::SwapChainData &SwapChainData);
 	glm::mat4 GetViewProjectionMatrix(const vk::su::SurfaceData& SurfaceData, const glm::mat4& CamMatrix);
-	void SetUniformDataModelViewProjection(const glm::mat4& projectionViewMatrix,const vk::su::SurfaceData& SurfaceData, const vk::PhysicalDevice& PhysicalDevice, const vk::Device& Device, const glm::mat4x4& ModelMatrix, const glm::mat4x4& CamMatrix);
+	void SetUniformDataModelViewProjection(const glm::mat4& projectionViewMatrix,const vk::su::SurfaceData& SurfaceData, const vk::PhysicalDevice& PhysicalDevice, const vk::Device& Device, const glm::mat4x4& ModelMatrix, const glm::mat4x4& CamMatrix, const bool ShouldUpdate);
 	vk::ResultValue<uint32_t> OnRenderStart(const vk::Device& Device, vk::su::SwapChainData& SwapChainData, vk::CommandBuffer& CommandBuffer, vk::su::SurfaceData& SurfaceData);
 	void OnRenderObj(const vk::CommandBuffer& CommandBuffer, const vk::su::BufferData& Data, const vk::ResultValue<uint32_t>& ResultValue, const vk::su::SurfaceData& SurfaceData);
 	void OnRenderFinish(const vk::ResultValue<uint32_t>& CurrentBuffer, const vk::CommandBuffer& CommandBuffer, const vk::Device& Device, const vk::su::SwapChainData& SwapChainData, const vk::Queue& GraphicsQueue, const vk::Queue& PresentQueue);
@@ -97,7 +97,7 @@ public:
 	Renderer(int Width, int Height);
 	void AddToRenderQueue(const unsigned int RenderPass, const Vector3 Pos) override final;
 	void PositionCamera(const Vector3& Position, const Vector3& Rotation) override final;
-	void Render() override final;
+	void Render(const float DeltaTime) override final;
 	bool WindowShouldClose() const override final;
 	void PollEvents() override final;
 	void OnGUIStart();
@@ -119,4 +119,6 @@ public:
 	GuiRenderPass m_guiPass;
 	glm::mat4x4 m_camMatrix = glm::mat4x4(1);
 	ImGui_ImplVulkanH_Window mainWindowData;
+	std::pair<float, float> m_upDateDescriptorTimer{ 0, 1.f };
+	bool m_shouldUpdateDescriptor{ true };
 };
