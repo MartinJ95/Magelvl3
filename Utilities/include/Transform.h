@@ -1,0 +1,24 @@
+#pragma once
+#include "Component.h"
+#include "Vector.h"
+
+class Transform : public Component
+{
+public:
+	Transform() : m_position(), m_rotation(), m_lastPosition(), m_lastRotation()
+	{}
+	void BeginPlay() override final;
+	void Update(float DeltaTime) override final;
+	void OnDestroy() override final;
+	void LateUpdate() override final;
+	void SetPosition(const Vector3& Position) { m_position = Position; }
+	void SetRotation(const Vector3& Rotation) { m_rotation = Rotation; }
+	void Translate(const Vector3& Position) { m_position += Position; }
+	const Vector3& GetPosition() const { return m_lastPosition; }
+	const Vector3& GetRotation() const { return m_lastRotation; }
+protected:
+	Vector3 m_position;
+	Vector3 m_rotation;
+	Vector3 m_lastPosition;
+	Vector3 m_lastRotation;
+};
