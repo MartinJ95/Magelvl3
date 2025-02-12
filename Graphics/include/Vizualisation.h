@@ -9,7 +9,7 @@
 class Vizualisation
 {
 public:
-	Vizualisation(int Width = 500, int Height = 500);
+	Vizualisation(int Width = 1280, int Height = 720);
 	void AddToRenderQueue(const Vector3& position);
 	void Render();
 	Renderer& GetRenderer() { return m_renderer; }
