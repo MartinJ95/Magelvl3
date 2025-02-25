@@ -16,6 +16,10 @@ public:
 	void Translate(const Vector3& Position) { m_position += Position; }
 	const Vector3& GetPosition() const { return m_lastPosition; }
 	const Vector3& GetRotation() const { return m_lastRotation; }
+	const Vector3& GetCurrentMove() const { return m_position - m_lastPosition; }
+	const Vector3& GetCurrentRotate() const { return m_rotation - m_lastRotation; }
+	Vector3& GetPositionRef() { return m_position; }
+	Vector3& GetRotationRef() { return m_rotation; }
 protected:
 	Vector3 m_position;
 	Vector3 m_rotation;

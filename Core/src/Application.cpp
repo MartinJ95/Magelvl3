@@ -27,10 +27,12 @@ void Application::Initialise()
 	m_entCompSyst.BeginPlay();
 
 	m_entCompSyst.RegisterComponent<CameraComponent>();
+	m_entCompSyst.RegisterComponent<Transform>();
+	m_entCompSyst.AddComponentDependancy<Transform, CameraComponent>();
+	m_entCompSyst.AddComponent<Transform>(0);
 	m_entCompSyst.AddComponent<CameraComponent>(0);
 
 	m_entCompSyst.RegisterComponent<ModelComponent>();
-	m_entCompSyst.RegisterComponent<Transform>();
 	m_entCompSyst.RegisterComponent<RigidBody>();
 	constexpr int stressTestNum = 20;
 	for (int i = 0; i < stressTestNum; i++)
@@ -39,7 +41,7 @@ void Application::Initialise()
 		{
 			for (int k = 0; k < stressTestNum; k++)
 			{
-				int index = k + j * stressTestNum + i * (stressTestNum * stressTestNum);
+				int index = 1 + k + j * stressTestNum + i * (stressTestNum * stressTestNum);
 				m_entCompSyst.AddComponent<Transform>(index);
 				m_entCompSyst.AddComponent<ModelComponent>(index);
 				m_entCompSyst.FindComponent<Transform>(index).SetPosition(Vector3(-stressTestNum * 0.5 + i * stressTestNum, -stressTestNum * 0.5 + j * stressTestNum, -stressTestNum * 0.5 + k * stressTestNum));

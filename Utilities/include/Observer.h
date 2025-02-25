@@ -8,17 +8,18 @@ template<typename T>
 class Observer
 {
 public:
-	Observer() : m_subject(nullptr)
+	Observer() : m_subject()
 	{
 
 	}
 	void AddSubject(Subject<T>* NewSubject)
 	{
-		m_subject = NewSubject;
+		//m_subject = NewSubject;
+		m_subject.emplace_back(NewSubject);
 	}
 	virtual void OnNotify(const T&) = 0;
 private:
-	Subject<T>* m_subject;
+	std::vector<Subject<T>*> m_subject;
 };
 
 template<typename T>

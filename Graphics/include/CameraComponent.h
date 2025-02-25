@@ -7,7 +7,7 @@
 class MovementObserver : public Observer<Vector3>
 {
 public:
-	MovementObserver(Vector3& ControlledVector) : m_controlledVector(&ControlledVector) 
+	MovementObserver(Vector3* ControlledVector) : m_controlledVector(ControlledVector) 
 	{
 	}
 	virtual void OnNotify(const Vector3& Data)
@@ -29,7 +29,7 @@ class MovementSubject : public Subject<Vector3>
 
 struct MovementKey
 {
-	MovementKey(int Key, const Vector3& MoveVector, Vector3& ControlledVector) : m_key(Key), m_moveVector(MoveVector), m_observer(ControlledVector), m_subject(), m_keyDown(false)
+	MovementKey(int Key, const Vector3& MoveVector, Vector3* ControlledVector) : m_key(Key), m_moveVector(MoveVector), m_observer(ControlledVector), m_subject(), m_keyDown(false)
 	{
 		//m_subject.AddSubscriber(&m_observer);
 		//glfwSetKeyCallback(GetRenderer().m_surfaceData.window.handle, KeyCallback);
@@ -89,17 +89,18 @@ public:
 	void Update(float DeltaTime) override final;
 	void OnDestroy() override final;
 	void OnInput(const int Key, const int Scancode, const int Action, const int Mods) override final;
+	void CleanComponent() override final;
 private:
 	std::array<MovementKey, 6> m_keyMovementInputs = {
-		MovementKey(GLFW_KEY_W, Vector3(0, 0, CamSpeed), m_position),
-		MovementKey(GLFW_KEY_S, Vector3(0, 0, -CamSpeed), m_position),
-		MovementKey(GLFW_KEY_A, Vector3(-CamSpeed, 0, 0), m_position),
-		MovementKey(GLFW_KEY_D, Vector3(CamSpeed, 0, 0), m_position ),
-		MovementKey(GLFW_KEY_LEFT, Vector3(0, -CamSpeed, 0), m_rotation),
-		MovementKey(GLFW_KEY_RIGHT, Vector3(0, CamSpeed, 0), m_rotation)
+		MovementKey(GLFW_KEY_W, Vector3(0, 0, CamSpeed), nullptr),
+		MovementKey(GLFW_KEY_S, Vector3(0, 0, -CamSpeed), nullptr),
+		MovementKey(GLFW_KEY_A, Vector3(-CamSpeed, 0, 0), nullptr),
+		MovementKey(GLFW_KEY_D, Vector3(CamSpeed, 0, 0), nullptr ),
+		MovementKey(GLFW_KEY_LEFT, Vector3(0, -CamSpeed, 0), nullptr),
+		MovementKey(GLFW_KEY_RIGHT, Vector3(0, CamSpeed, 0), nullptr)
 	};
-	Vector3 m_position;
-	Vector3 m_rotation;
-	Vector3 m_FinalPosition;
-	Vector3 m_FinalRotation;
+	//Vector3 m_position;
+	//Vector3 m_rotation;
+	//Vector3 m_FinalPosition;
+	//Vector3 m_FinalRotation;
 };

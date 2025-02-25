@@ -6,6 +6,7 @@ public:
 	virtual void BeginPlay() = 0;
 	virtual void Update(float DeltaTime) = 0;
 	virtual void LateUpdate() {};
+	virtual void CleanComponent() {};
 	virtual void OnDestroy() = 0;
 	virtual void OnInput(const int Key, const int Scancode, const int Action, const int Mods) {}
 	void AssignEntity(const int EntityID);
