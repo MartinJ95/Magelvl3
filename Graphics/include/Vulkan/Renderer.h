@@ -31,10 +31,28 @@ static void KeyCallback(GLFWwindow* window, int key, int scancode, int action, i
 	InputFunction(key, scancode, action, mods);
 }
 
+struct Vertex
+{
+	Vertex(glm::vec4 Position, glm::vec4 Color) : m_position(Position), m_color(Color) {}
+	glm::vec4 m_position;
+	glm::vec4 m_color;
+};
+
 struct GraphicsModel
 {
-	GraphicsModel(const vk::su::BufferData& Data) : m_vertexBufferData(Data) {}
-	GraphicsModel(vk::su::BufferData&& Data) : m_vertexBufferData(std::move(Data)) {}
+	GraphicsModel(vk::PhysicalDevice& PhysicalDevice, vk::Device& Device,  std::vector<Vertex>&& Vertices, std::vector<unsigned int>&& Elements) :
+		m_vertices(Vertices), m_elements(Elements), m_vertexBufferData(PhysicalDevice, Device, sizeof(Vertex) * m_vertices.size(), vk::BufferUsageFlagBits::eVertexBuffer)
+	{
+		vk::su::copyToDevice(Device, m_vertexBufferData.deviceMemory, (VertexPC*)&m_vertices[0], m_vertices.size() /*sizeof(coloredCubeData) / sizeof(coloredCubeData[0])*/);
+	}
+	GraphicsModel(const vk::su::BufferData& Data) : 
+		m_vertexBufferData(Data) {}
+	GraphicsModel(vk::su::BufferData&& Data) : 
+		m_vertexBufferData(std::move(Data)) {}
+	GraphicsModel(const GraphicsModel& Other) :
+		m_renderingPassId(Other.m_renderingPassId), m_vertices(Other.m_vertices), m_elements(Other.m_elements), m_vertexBufferData(Other.m_vertexBufferData) {}
+	GraphicsModel(GraphicsModel&& Other) :
+		m_renderingPassId(Other.m_renderingPassId), m_vertices(std::move(Other.m_vertices)), m_elements(std::move(Other.m_elements)), m_vertexBufferData(std::move(Other.m_vertexBufferData)) {}
 	void operator=(const vk::su::BufferData& Data) 
 	{
 		m_vertexBufferData = Data;
@@ -43,8 +61,10 @@ struct GraphicsModel
 	{
 		m_vertexBufferData = std::move(Data);
 	}
-	vk::su::BufferData m_vertexBufferData;
 	unsigned int m_renderingPassId;
+	std::vector<Vertex> m_vertices;
+	std::vector<unsigned int> m_elements;
+	vk::su::BufferData m_vertexBufferData;
 };
 
 constexpr unsigned int ModelBufferAmount = 50*50*50+10;
@@ -90,12 +110,11 @@ struct GuiRenderPass
 	std::vector<vk::Framebuffer> m_frameBuffers;
 };
 
-
 class Renderer : public RendererSpec
 {
 public:
 	Renderer(int Width, int Height);
-	void AddToRenderQueue(const unsigned int RenderPass, const Vector3 Pos) override final;
+	void AddToRenderQueue(const unsigned int RenderPass, const Vector3& Pos, const unsigned int ModelID) override final;
 	void PositionCamera(const Vector3& Position, const Vector3& Rotation) override final;
 	void Render(const float DeltaTime) override final;
 	bool WindowShouldClose() const override final;
@@ -114,7 +133,7 @@ public:
 	vk::Queue m_presentQueue;
 	vk::su::SwapChainData m_swapChainData;
 	std::unordered_map<unsigned int, GraphicsModel> m_modelDatas;
-	std::unordered_map<unsigned int, std::queue<glm::mat4x4>> m_renderingTargets;
+	std::unordered_map<unsigned int, std::unordered_map<unsigned int, std::queue<glm::mat4x4>>> m_renderingTargets;
 	std::unordered_map<unsigned int, GraphicsRenderPass> m_renderPasses;
 	GuiRenderPass m_guiPass;
 	glm::mat4x4 m_camMatrix = glm::mat4x4(1);

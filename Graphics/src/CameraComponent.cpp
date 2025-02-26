@@ -82,9 +82,9 @@ void CameraComponent::Update(float DeltaTime)
 
 	glm::vec3 direction = glm::vec3(dir.x, dir.y, dir.z);
 
-	direction = direction * rotation;
+	direction = rotation * direction;
 
-	t.SetPosition(t.GetPosition() + Vector3(direction.x, direction.y, direction.z));
+	t.SetPosition(t.GetPosition() + Vector3(direction.x, direction.y, direction.z) * DeltaTime);
 
 	//render.PositionCamera(m_FinalPosition, m_FinalRotation);
 	render.PositionCamera(t.GetPosition(), t.GetRotation());

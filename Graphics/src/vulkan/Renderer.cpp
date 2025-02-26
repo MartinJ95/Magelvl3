@@ -1,5 +1,6 @@
 #include "Renderer.h"
-
+#include "ECS.h"
+#include "Transform.h"
 #include "PhysicsBase.h"
 
 void (*InputFunction)(int, int, int, int) = NULL;
@@ -59,12 +60,70 @@ m_vulkanInstance(
         m_graphicsAndPresentQueueFamilyIndex.second),
     m_modelDatas(
         {
+            
             {
                 0,
                 std::move(vk::su::BufferData(m_physicalDevice,
                 m_device,
                 sizeof(coloredCubeData),
                 vk::BufferUsageFlagBits::eVertexBuffer))
+            },
+            
+            {
+                1,
+                std::move(
+                    GraphicsModel(
+                        m_physicalDevice, 
+                        m_device, 
+                        std::move(        
+                            std::vector<Vertex>
+{
+                                    // red face
+                                  {glm::vec4{ -1.0f, -1.0f,  1.0f, 1.0f},    glm::vec4(1.0f, 0.0f, 0.0f, 1.0f)},
+                                  {glm::vec4(  -1.0f, 1.0f,  1.0f, 1.0f),    {1.0f, 0.0f, 0.0f, 1.0f }},
+                                  {glm::vec4(  1.0f, -1.0f,  1.0f, 1.0f),    {1.0f, 0.0f, 0.0f, 1.0f }},
+                                  {glm::vec4( 1.0f,  -1.0f,  1.0f, 1.0f),    {1.0f, 0.0f, 0.0f, 1.0f }},
+                                  {glm::vec4(  -1.0f,  1.0f,  1.0f, 1.0f),    {1.0f, 0.0f, 0.0f, 1.0f }},
+                                  {glm::vec4( 1.0f,  1.0f,  1.0f, 1.0f),    {1.0f, 0.0f, 0.0f, 1.0f }},
+                                  // green face
+                                  {{ -1.0f, -1.0f, -1.0f, 1.0f},    {0.0f, 1.0f, 0.0f, 1.0f }},
+                                  {{  1.0f, -1.0f, -1.0f, 1.0f},    {0.0f, 1.0f, 0.0f, 1.0f }},
+                                  {{ -1.0f,  1.0f, -1.0f, 1.0f},    {0.0f, 1.0f, 0.0f, 1.0f }},
+                                  {{ -1.0f,  1.0f, -1.0f, 1.0f},    {0.0f, 1.0f, 0.0f, 1.0f }},
+                                  {{  1.0f, -1.0f, -1.0f, 1.0f},    {0.0f, 1.0f, 0.0f, 1.0f }},
+                                  {{  1.0f,  1.0f, -1.0f, 1.0f},    {0.0f, 1.0f, 0.0f, 1.0f }},
+                                  // blue face
+                                  {{ -1.0f,  1.0f,  1.0f, 1.0f},    {0.0f, 0.0f, 1.0f, 1.0f }},
+                                  {{ -1.0f, -1.0f,  1.0f, 1.0f},    {0.0f, 0.0f, 1.0f, 1.0f }},
+                                  {{ -1.0f,  1.0f, -1.0f, 1.0f},    {0.0f, 0.0f, 1.0f, 1.0f }},
+                                  {{ -1.0f,  1.0f, -1.0f, 1.0f},    {0.0f, 0.0f, 1.0f, 1.0f }},
+                                  {{ -1.0f, -1.0f,  1.0f, 1.0f},    {0.0f, 0.0f, 1.0f, 1.0f }},
+                                {{ -1.0f, -1.0f, -1.0f, 1.0f},    {0.0f, 0.0f, 1.0f, 1.0f }},
+                                  // yellow face
+                                  {{  1.0f,  1.0f,  1.0f, 1.0f},    {1.0f, 1.0f, 0.0f, 1.0f }},
+                                  {{  1.0f,  1.0f, -1.0f, 1.0f},    {1.0f, 1.0f, 0.0f, 1.0f }},
+                                  {{  1.0f, -1.0f,  1.0f, 1.0f},    {1.0f, 1.0f, 0.0f, 1.0f }},
+                                  {{  1.0f, -1.0f,  1.0f, 1.0f},    {1.0f, 1.0f, 0.0f, 1.0f }},
+                                  {{  1.0f,  1.0f, -1.0f, 1.0f},    {1.0f, 1.0f, 0.0f, 1.0f }},
+                                  {{  1.0f, -1.0f, -1.0f, 1.0f},    {1.0f, 1.0f, 0.0f, 1.0f }},
+                                  // magenta face
+                                  {{  1.0f,  1.0f,  1.0f, 1.0f},    {1.0f, 0.0f, 1.0f, 1.0f }},
+                                  {{ -1.0f,  1.0f,  1.0f, 1.0f},    {1.0f, 0.0f, 1.0f, 1.0f }},
+                                  {{  1.0f,  1.0f, -1.0f, 1.0f},    {1.0f, 0.0f, 1.0f, 1.0f }},
+                                  {{  1.0f,  1.0f, -1.0f, 1.0f},    {1.0f, 0.0f, 1.0f, 1.0f }},
+                                  {{ -1.0f,  1.0f,  1.0f, 1.0f},    {1.0f, 0.0f, 1.0f, 1.0f }},
+                                {{ -1.0f,  1.0f, -1.0f, 1.0f}, { 1.0f, 0.0f, 1.0f, 1.0f }},
+                                  // cyan face
+                                  {{  1.0f, -1.0f,  1.0f, 1.0f},    {0.0f, 1.0f, 1.0f, 1.0f }},
+                                  {{  1.0f, -1.0f, -1.0f, 1.0f},    {0.0f, 1.0f, 1.0f, 1.0f }},
+                                  {{ -1.0f, -1.0f,  1.0f, 1.0f},    {0.0f, 1.0f, 1.0f, 1.0f }},
+                                  {{ -1.0f, -1.0f,  1.0f, 1.0f},    {0.0f, 1.0f, 1.0f, 1.0f }},
+                                  {{  1.0f, -1.0f, -1.0f, 1.0f},    {0.0f, 1.0f, 1.0f, 1.0f }},
+                                  {{ -1.0f, -1.0f, -1.0f, 1.0f},    {0.0f, 1.0f, 1.0f, 1.0f }}
+                                  }
+                        ),
+                 std::move(std::vector<unsigned int>()))
+                 )
             }
         }
     ),
@@ -92,6 +151,64 @@ m_vulkanInstance(
 {
     try
     {
+        /*
+        
+        std::vector<Vertex> cubeVertices{
+            //red face
+            {glm::vec4(-1.0f, -1.0f,  1.0f, 1.0f),    glm::vec4(1.0f, 0.0f, 0.0f, 1.0f)},
+            {glm::vec4(1.f, -1.f, 1.f, 1.f), glm::vec4(1.f, 0.f, 0.f, 1.f)},
+            {glm::vec4(1.f, -1.f, 1.f, 1.f), glm::vec4(1.f, 0.f, 0.f, 1.f)},
+            {glm::vec4(-1.f, 1.f, 1.f, 1.f), glm::vec4(1.f, 0.f, 0.f, 1.f)},
+            {glm::vec4(1.f, 1.f, 1.f, 1.f), glm::vec4(1.f, 0.f, 0.f, 0.f)},
+            {glm::vec4(-1.f, 1.f, 1.f, 1.f), glm::vec4(1.f, 0.f, 0.f, 0.f) },
+            //green face
+            {glm::vec4( - 1.0f, -1.0f, -1.0f, 1.0f ), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f)},
+            {glm::vec4(  1.0f, -1.0f, -1.0f, 1.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f)},
+            {glm::vec4( - 1.0f,  1.0f, -1.0f, 1.0f),    glm::vec4(0.0f, 1.0f, 0.0f, 1.0f)},
+            {glm::vec4( - 1.0f,  1.0f, -1.0f, 1.0f),    glm::vec4(0.0f, 1.0f, 0.0f, 1.0f)},
+            {glm::vec4(1.0f, -1.0f, -1.0f, 1.0f),    glm::vec4(0.0f, 1.0f, 0.0f, 1.0f)},
+            {glm::vec4(  1.0f,  1.0f, -1.0f, 1.0f),    glm::vec4(0.0f, 1.0f, 0.0f, 1.0f )},
+            // blue face
+                                  { { -1.0f,  1.0f,  1.0f, 1.0f },    {0.0f, 0.0f, 1.0f, 1.0f } },
+                                  {{ -1.0f, -1.0f,  1.0f, 1.0f},    {0.0f, 0.0f, 1.0f, 1.0f }},
+                                  {{ -1.0f,  1.0f, -1.0f, 1.0f},    {0.0f, 0.0f, 1.0f, 1.0f }},
+                                  {{ -1.0f,  1.0f, -1.0f, 1.0f},    {0.0f, 0.0f, 1.0f, 1.0f }},
+                                  {{ -1.0f, -1.0f,  1.0f, 1.0f},    {0.0f, 0.0f, 1.0f, 1.0f }},
+                                {{ -1.0f, -1.0f, -1.0f, 1.0f},    {0.0f, 0.0f, 1.0f, 1.0f }},
+            // yellow face
+            {{  1.0f,  1.0f,  1.0f, 1.0f},    {1.0f, 1.0f, 0.0f, 1.0f }},
+            {{  1.0f,  1.0f, -1.0f, 1.0f},    {1.0f, 1.0f, 0.0f, 1.0f }},
+            {{  1.0f, -1.0f,  1.0f, 1.0f},    {1.0f, 1.0f, 0.0f, 1.0f }},
+            {{  1.0f, -1.0f,  1.0f, 1.0f},    {1.0f, 1.0f, 0.0f, 1.0f }},
+            {{  1.0f,  1.0f, -1.0f, 1.0f},    {1.0f, 1.0f, 0.0f, 1.0f }},
+            {{  1.0f, -1.0f, -1.0f, 1.0f},    {1.0f, 1.0f, 0.0f, 1.0f }},
+            // magenta face
+            {{  1.0f,  1.0f,  1.0f, 1.0f},    {1.0f, 0.0f, 1.0f, 1.0f }},
+            {{ -1.0f,  1.0f,  1.0f, 1.0f},    {1.0f, 0.0f, 1.0f, 1.0f }},
+            {{  1.0f,  1.0f, -1.0f, 1.0f},    {1.0f, 0.0f, 1.0f, 1.0f }},
+            {{  1.0f,  1.0f, -1.0f, 1.0f},    {1.0f, 0.0f, 1.0f, 1.0f }},
+            {{ -1.0f,  1.0f,  1.0f, 1.0f},    {1.0f, 0.0f, 1.0f, 1.0f }},
+          {{ -1.0f,  1.0f, -1.0f, 1.0f}, { 1.0f, 0.0f, 1.0f, 1.0f }},
+            // cyan face
+            {{  1.0f, -1.0f,  1.0f, 1.0f},    {0.0f, 1.0f, 1.0f, 1.0f }},
+            {{  1.0f, -1.0f, -1.0f, 1.0f},    {0.0f, 1.0f, 1.0f, 1.0f }},
+            {{ -1.0f, -1.0f,  1.0f, 1.0f},    {0.0f, 1.0f, 1.0f, 1.0f }},
+            {{ -1.0f, -1.0f,  1.0f, 1.0f},    {0.0f, 1.0f, 1.0f, 1.0f }},
+            {{  1.0f, -1.0f, -1.0f, 1.0f},    {0.0f, 1.0f, 1.0f, 1.0f }},
+            {{ -1.0f, -1.0f, -1.0f, 1.0f},    {0.0f, 1.0f, 1.0f, 1.0f }}
+        };
+
+        std::vector<unsigned int> cubeElements{};
+
+        
+        m_modelDatas.emplace(
+
+            1,
+            std::move(GraphicsModel(m_physicalDevice, m_device, cubeVertices, cubeElements))
+        );
+        
+        */
+
         //ImGui::CreateContext();
         ImGuiIO& io = ImGui::GetIO(); (void)io;
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
@@ -112,9 +229,10 @@ m_vulkanInstance(
         info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 
         ImGui_ImplVulkan_Init(&info);
-
+        /* temp comm
         m_renderingTargets.at(0).emplace(vk::su::createModelViewProjectionClipMatrix(
             m_surfaceData.extent));
+        */
         //vk::Instance instance = vk::su::createInstance(AppName, EngineName, {}, vk::su::getInstanceExtensions());
 #if !defined( NDEBUG )
         //vk::DebugUtilsMessengerEXT debugUtilsMessenger = instance.createDebugUtilsMessengerEXT(vk::su::makeDebugUtilsMessengerCreateInfoEXT());
@@ -143,14 +261,22 @@ m_vulkanInstance(
     //ImGui_ImplVulkanH_CreateOrResizeWindow(m_vulkanInstance, m_physicalDevice, m_device, &mainWindowData, m_graphicsAndPresentQueueFamilyIndex.first, nullptr, m_surfaceData.extent.width, m_surfaceData.extent.height, 2);
 }
 
-void Renderer::AddToRenderQueue(const unsigned int RenderPass, const Vector3 Pos)
+void Renderer::AddToRenderQueue(const unsigned int RenderPass, const Vector3& Pos, const unsigned int ModelID)
 {
 
     glm::mat4x4 transform(1);
 
     transform = glm::translate(transform, glm::vec3(Pos.x, Pos.y, Pos.z));
 
-    m_renderingTargets.at(RenderPass).emplace(transform);
+    
+    
+    if (m_renderingTargets.at(RenderPass).find(ModelID) == m_renderingTargets.at(RenderPass).end())
+    {
+        m_renderingTargets.at(RenderPass).insert({ ModelID, {} });
+    }
+    
+    
+    m_renderingTargets.at(RenderPass).at(ModelID).emplace(transform);
 }
 
 void Renderer::PositionCamera(const Vector3& Position, const Vector3& Rotation)
@@ -278,10 +404,12 @@ void GraphicsRenderPass::OnRenderObj(const vk::CommandBuffer& CommandBuffer, con
 
     CommandBuffer.bindVertexBuffers(0, Data.buffer,{0});
 
+    /*
     CommandBuffer.setViewport(
         0, vk::Viewport(0.0f, 0.0f, static_cast<float>(SurfaceData.extent.width), static_cast<float>(SurfaceData.extent.height), 0.0f, 1.0f));
     CommandBuffer.setScissor(0, vk::Rect2D(vk::Offset2D(0, 0), SurfaceData.extent));
-
+    */
+    
     CommandBuffer.draw(12 * 3, 1, 0, 0);
 }
 
@@ -375,6 +503,7 @@ void Renderer::Render(const float DeltaTime)
     if (ImGui::InputFloat3("World Dir",
         (float*) & GetPhysicsInstance().m_downVec)) {
     }
+    if (ImGui::InputFloat3("CamPos", (float*)&GetEcsInstance().FindComponent<Transform>(0).GetPositionRef())) {}
     ImGui::End();
     ImGui::ShowDemoWindow();
     ImGui::Render();
@@ -382,24 +511,43 @@ void Renderer::Render(const float DeltaTime)
     
     //works but doesnt at same time
     //ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), m_commandBuffer);
+    // 
+    
     for (auto& it : m_renderingTargets)
     {
-        int lastUsed = -1;
-        int Current = 0;
-        vk::ResultValue<uint32_t> CurrentBuffer = m_renderPasses.at(it.first).OnRenderStart(m_device, m_swapChainData, m_commandBuffer, m_surfaceData);
-        glm::mat4 viewProjection = m_renderPasses.at(it.first).GetViewProjectionMatrix(m_surfaceData, m_camMatrix);
-        while (it.second.size() > 0)
+        for (auto& it1 : it.second)
         {
-            glm::mat4x4 Transform = it.second.front();
-            it.second.pop();
 
-            m_renderPasses.at(it.first).SetUniformDataModelViewProjection(viewProjection, m_surfaceData, m_physicalDevice, m_device, Transform, m_camMatrix, m_shouldUpdateDescriptor);
-            m_renderPasses.at(it.first).OnRenderObj(m_commandBuffer, m_modelDatas.at(0).m_vertexBufferData, CurrentBuffer, m_surfaceData);
-        }
+            int lastUsed = -1;
+            int Current = 0;
+
+            vk::ResultValue<uint32_t> CurrentBuffer = m_renderPasses.at(it.first).OnRenderStart(m_device, m_swapChainData, m_commandBuffer, m_surfaceData);
+
+            glm::mat4 viewProjection = m_renderPasses.at(it.first).GetViewProjectionMatrix(m_surfaceData, m_camMatrix);
+
+            m_commandBuffer.setViewport(
+                0, vk::Viewport(0.0f, 0.0f, static_cast<float>(m_surfaceData.extent.width), static_cast<float>(m_surfaceData.extent.height), 0.0f, 1.0f));
+
+            m_commandBuffer.setScissor(0, vk::Rect2D(vk::Offset2D(0, 0), m_surfaceData.extent));
+
+            while (it1.second.size() > 0)
+            {
+                glm::mat4x4 Transform = it1.second.front();
+                
+                it1.second.pop();
+
+                m_renderPasses.at(it.first).SetUniformDataModelViewProjection(viewProjection, m_surfaceData, m_physicalDevice, m_device, Transform, m_camMatrix, m_shouldUpdateDescriptor);
+
+            
+
+                m_renderPasses.at(it.first).OnRenderObj(m_commandBuffer, m_modelDatas.at(0).m_vertexBufferData, CurrentBuffer, m_surfaceData);
+            }
         
-        m_renderPasses.at(it.first).OnRenderFinish(CurrentBuffer, m_commandBuffer, m_device, m_swapChainData, m_graphicsQueue, m_presentQueue);
-    }
+            m_renderPasses.at(it.first).OnRenderFinish(CurrentBuffer, m_commandBuffer, m_device, m_swapChainData, m_graphicsQueue, m_presentQueue);
+        }
     m_shouldUpdateDescriptor = false;
+    }
+    
 }
 
 bool Renderer::WindowShouldClose() const
@@ -446,6 +594,7 @@ Renderer::~Renderer()
     }
     for (auto& it : m_renderPasses)
     {
+        vkResetDescriptorPool(m_device, it.second.m_descriptorPool, {});
         m_device.destroyPipeline(it.second.m_pipeline);
         m_device.destroyPipelineCache(it.second.m_pipelineCache);
         m_device.destroyDescriptorPool(it.second.m_descriptorPool);
