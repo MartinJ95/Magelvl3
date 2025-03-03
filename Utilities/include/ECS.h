@@ -46,6 +46,7 @@ public:
 	void AddComponent(unsigned int Entity);
 	template <typename T>
 	T& FindComponent(unsigned int Entity);
+	const std::unordered_map<unsigned int, void*>& GetAllComponentsOfEntity(const int Entity) const;
 	void UpdateComponents(float DeltaTime);
 	void LateUpdate();
 	void UpdateComponentsInput(const int Key, const int Scancode, const int Action, const int Mods);
