@@ -671,7 +671,7 @@ GraphicsRenderPass::GraphicsRenderPass(const vk::PhysicalDevice& PhysicalDevice,
 
     glslang::InitializeProcess();
 
-    m_vertexShaderModule = vk::su::createShaderModule(Device, vk::ShaderStageFlagBits::eVertex, vertexShaderText_PC_C);
+    m_vertexShaderModule = vk::su::createShaderModule(Device, vk::ShaderStageFlagBits::eVertex, VertexShader);
 
     m_fragmentShaderModule = vk::su::createShaderModule(Device, vk::ShaderStageFlagBits::eFragment, fragmentShaderText_C_C);
     glslang::FinalizeProcess();
