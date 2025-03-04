@@ -14,6 +14,21 @@ public:
 	void SetPosition(const Vector3& Position) { m_position = Position; }
 	void SetRotation(const Vector3& Rotation) { m_rotation = Rotation; }
 	void Translate(const Vector3& Position) { m_position += Position; }
+	
+	void GetDecompositions(std::vector<std::pair<ComponentDecompositionTypes, std::string>>& InVec) const override final
+	{
+		
+		InVec.emplace_back(std::make_pair(ComponentDecompositionTypes::eFloat3, "lastrotation"));
+		InVec.emplace_back(std::make_pair(ComponentDecompositionTypes::eFloat3, "lastposition"));
+		InVec.emplace_back(std::make_pair(ComponentDecompositionTypes::eFloat3, "rotation"));
+		InVec.emplace_back(std::make_pair(ComponentDecompositionTypes::eFloat3, "position"));
+
+		Component::GetDecompositions(InVec);
+		
+		//return types;
+		
+	}
+	
 	const Vector3& GetPosition() const { return m_lastPosition; }
 	const Vector3& GetRotation() const { return m_lastRotation; }
 	const Vector3& GetCurrentMove() const { return m_position - m_lastPosition; }

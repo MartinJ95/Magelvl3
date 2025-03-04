@@ -26,14 +26,14 @@ void Application::Initialise()
 	InputFunction = &InputCallback;
 	m_entCompSyst.BeginPlay();
 
-	m_entCompSyst.RegisterComponent<CameraComponent>();
-	m_entCompSyst.RegisterComponent<Transform>();
+	m_entCompSyst.RegisterComponent<CameraComponent>("Camera");
+	m_entCompSyst.RegisterComponent<Transform>("Transform");
 	m_entCompSyst.AddComponentDependancy<Transform, CameraComponent>();
 	m_entCompSyst.AddComponent<Transform>(0);
 	m_entCompSyst.AddComponent<CameraComponent>(0);
 
-	m_entCompSyst.RegisterComponent<ModelComponent>();
-	m_entCompSyst.RegisterComponent<RigidBody>();
+	m_entCompSyst.RegisterComponent<ModelComponent>("Model");
+	m_entCompSyst.RegisterComponent<RigidBody>("RigidBody");
 	constexpr int stressTestNum = 20;
 	for (int i = 0; i < stressTestNum; i++)
 	{

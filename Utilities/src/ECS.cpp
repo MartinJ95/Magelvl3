@@ -22,16 +22,23 @@ ECS::ECS() : m_isRunning(false)
 {
 }
 
-const std::unordered_map<unsigned int, void*>& ECS::GetAllComponentsOfEntity(const int Entity) const
+std::unordered_map<unsigned int, Component*> ECS::GetAllComponentsOfEntity(const unsigned int Entity) const
 {
-	std::unordered_map<unsigned int, void*> ComponentsOnEntity;
+	std::unordered_map<unsigned int, Component*> ComponentsOnEntity;
 
 	for (auto& container : m_compContainers)
 	{
 		
 		if (container.second.m_entityToCompMap.find(Entity) != container.second.m_entityToCompMap.end())
 		{
-			ComponentsOnEntity.emplace(std::make_pair(container.second.m_stride, (void*)&container.second.m_data.at(container.second.m_entityToCompMap.find(Entity)->second)));
+			ComponentsOnEntity.emplace(
+				std::make_pair(
+					container.second.m_stride,
+					(Component*) & container.second.m_data.at(
+						container.second.m_entityToCompMap.find(Entity)->second * container.second.m_stride
+					)
+				)
+			);
 		}
 	}
 	return ComponentsOnEntity;	

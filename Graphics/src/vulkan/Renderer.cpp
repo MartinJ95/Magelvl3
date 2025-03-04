@@ -2,6 +2,7 @@
 #include "ECS.h"
 #include "Transform.h"
 #include "PhysicsBase.h"
+#include "imgui-1.91.8/misc/cpp/imgui_stdlib.h"
 
 void (*InputFunction)(int, int, int, int) = NULL;
 
@@ -229,6 +230,7 @@ m_vulkanInstance(
         info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 
         ImGui_ImplVulkan_Init(&info);
+
         /* temp comm
         m_renderingTargets.at(0).emplace(vk::su::createModelViewProjectionClipMatrix(
             m_surfaceData.extent));
@@ -487,6 +489,8 @@ void Renderer::Render(const float DeltaTime)
         m_shouldUpdateDescriptor = true;
     }
 
+    ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue;
+
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     //ImGui::GetIO().DisplaySize = ImVec2(100, 100);
@@ -506,6 +510,64 @@ void Renderer::Render(const float DeltaTime)
     if (ImGui::InputFloat3("CamPos", (float*)&GetEcsInstance().FindComponent<Transform>(0).GetPositionRef())) {}
     ImGui::End();
     ImGui::ShowDemoWindow();
+
+    ImGui::Begin("Entities");
+    for (auto& ent : GetEcsInstance().m_entities)
+    {
+
+        std::string entLabel = std::to_string(ent.first);
+
+        if (ImGui::InputText(entLabel.c_str(), &ent.second, flags))
+        {
+
+        }
+        if (ImGui::BeginCombo((entLabel + "combo").c_str(), ent.second.c_str()))
+        {
+            ECS& ecsystem = GetEcsInstance();
+
+                std::unordered_map<unsigned int, Component*> comps = ecsystem.GetAllComponentsOfEntity(ent.first);
+
+                for (auto& comp : comps)
+                {
+                    std::vector<std::pair<ComponentDecompositionTypes, std::string>> types;
+                    comp.second->GetDecompositions(types);
+
+                    unsigned int offset = sizeof(char)*8;
+                    
+                    while (!types.empty())
+                    {
+                        char* data = (char*)comp.second;
+                        data += offset;
+
+                        unsigned int CompOffset = 0;
+
+                        switch (types.back().first)
+                        {
+                        case ComponentDecompositionTypes::eInt:
+                            ImGui::InputInt((EcsInstance->m_componentNames.at(comp.first) + entLabel + "o" + std::to_string(offset) + types.back().second).c_str(), (int*)data);
+                            offset += (sizeof(int) / sizeof(char));
+                            break;
+                        case ComponentDecompositionTypes::eBool:
+                            break;
+                        case ComponentDecompositionTypes::eFloat3:
+                            ImGui::InputFloat3((EcsInstance->m_componentNames.at(comp.first) + entLabel + "o" + std::to_string(offset) + types.back().second).c_str(), (float*)data);
+                            offset += (sizeof(float) / sizeof(char)) * 3;
+                            break;
+                        case ComponentDecompositionTypes::ePad:
+                            offset += (sizeof(char));
+                            default:
+                                break;
+                        }
+                        CompOffset++;
+                        types.pop_back();
+                    }
+                    
+                }
+
+            ImGui::EndCombo();
+        }
+    }
+    ImGui::End();
     ImGui::Render();
     ImGui::EndFrame();
     

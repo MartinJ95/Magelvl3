@@ -1,6 +1,7 @@
 #pragma once
 
 #include <unordered_map>
+#include <iostream>
 #include <vector>
 #include "Component.h"
 #include "Observer.h"
@@ -41,12 +42,12 @@ class ECS
 public:
 	ECS();
 	template<typename T>
-	void RegisterComponent();
+	void RegisterComponent(const std::string& CompName);
 	template<typename T>
 	void AddComponent(unsigned int Entity);
 	template <typename T>
 	T& FindComponent(unsigned int Entity);
-	const std::unordered_map<unsigned int, void*>& GetAllComponentsOfEntity(const int Entity) const;
+	std::unordered_map<unsigned int, Component*> GetAllComponentsOfEntity(const unsigned int Entity) const;
 	void UpdateComponents(float DeltaTime);
 	void LateUpdate();
 	void UpdateComponentsInput(const int Key, const int Scancode, const int Action, const int Mods);
@@ -55,11 +56,13 @@ public:
 	void AddComponentDependancy();
 public:
 	std::unordered_map<unsigned int, ECContainer> m_compContainers;
+	std::unordered_map<unsigned int, std::string> m_entities;
+	std::unordered_map<unsigned int, std::string> m_componentNames;
 	bool m_isRunning;
 };
 
 template<typename T>
-inline void ECS::RegisterComponent()
+inline void ECS::RegisterComponent(const std::string& CompName)
 {
 	/*
 	if (m_compContainers.find(sizeof(T)) != m_compContainers.end())
@@ -71,6 +74,8 @@ inline void ECS::RegisterComponent()
 	assert(m_compContainers.find(sizeof(T)) == m_compContainers.end());
 
 	m_compContainers.emplace(sizeof(T), sizeof(T));
+
+	m_componentNames.emplace(sizeof(T), CompName);
 }
 
 template<typename T>
@@ -124,6 +129,8 @@ inline void ECS::AddComponent(unsigned int Entity)
 	}
 	*/
 	assert(m_compContainers.find(sizeof(T)) != m_compContainers.end(), "Forgot to register Component");
+
+	m_entities.emplace(std::make_pair(Entity, "NewEntity"));
 
 	m_compContainers.find(sizeof(T))->second.AddComponent<T>(Entity, m_isRunning);
 }
