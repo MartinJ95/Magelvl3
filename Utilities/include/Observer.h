@@ -1,5 +1,9 @@
 #pragma once
 #include <vector>
+#include <deque>
+#include "TFixedArray.h"
+
+constexpr int SubscribeAmount = 10;
 
 template<typename T>
 class Subject;
@@ -8,33 +12,49 @@ template<typename T>
 class Observer
 {
 public:
-	Observer() : m_subject()
+	Observer()
 	{
 
 	}
 	void AddSubject(Subject<T>* NewSubject)
 	{
 		//m_subject = NewSubject;
-		m_subject.emplace_back(NewSubject);
+		m_subject.Add(NewSubject);
 	}
 	virtual void OnNotify(const T&) = 0;
+	void SetSubjects(std::vector<Subject<T>*> NewSubjects)
+	{
+		//m_subject = NewSubjects;
+	}
 private:
-	std::vector<Subject<T>*> m_subject;
+	TFixedArray<Subject<T>*, SubscribeAmount> m_subject{nullptr};
 };
 
 template<typename T>
 class Subject
 {
 public:
+	Subject()
+	{
+	}
+	Subject(const Subject& Other) : 
+		m_observers(Other.m_observers)
+	{}
+	Subject(Subject&& Other) :
+		m_observers(std::move(Other.m_observers))
+	{
+		std::cout << "hey" << std::endl;
+	}
+public:
 	virtual void Notify(const T& Data)
 	{
-		for (int i = 0; i < m_observers.size(); i++)
+		for (int i = 0; i < m_observers.Size(); i++)
 		{
-			if (m_observers.at(i) == nullptr)
+			if (m_observers[i] == nullptr)
 			{
 				continue;
 			}
-			m_observers.at(i)->OnNotify(Data);
+			m_observers[i]->OnNotify(Data);
 		}
 		/*
 		for (auto& it : m_observers)
@@ -50,9 +70,21 @@ public:
 	}
 	void AddSubscriber(Observer<T>* NewObserver)
 	{
-		m_observers.emplace_back(NewObserver);
+		m_observers.Add(NewObserver);
 		NewObserver->AddSubject(this);
 	}
+	void SetObservers(std::vector<Observer<T>*> NewObservers)
+	{
+		//m_observers = NewObservers;
+	}
+	void operator=(const Subject& Other)
+	{
+		m_observers = Other.m_observers;
+	}
+	void operator=(Subject&& Other)
+	{
+		m_observers = std::move(Other.m_observers);
+	}
 private:
-	std::vector<Observer<T>*> m_observers;
+	TFixedArray<Observer<T>*, SubscribeAmount> m_observers{nullptr};
 };

@@ -9,7 +9,7 @@
 
 class ECContainer;
 
-constexpr int ECCCapacity = 100;
+constexpr int ECCCapacity = 10000;
 
 class ECCObserver : public Observer<int>
 {
@@ -84,12 +84,16 @@ inline void ECS::RegisterComponent(const std::string& CompName)
 
 	m_compContainers.emplace(sizeof(T), sizeof(T));
 
+	m_compContainers.find(sizeof(T))->second.ConstructComponents<T>();
+
 	m_componentNames.emplace(sizeof(T), CompName);
 }
 
 template<typename T>
 inline void ECContainer::ConstructComponents()
 {
+	m_data.reserve(ECCCapacity * m_stride);
+	bool DynamicMemory = false;
 	for (int i = 0; i < ECCCapacity; i++)
 	{
 		for (int j = 0; j < m_stride; j++)
@@ -98,8 +102,26 @@ inline void ECContainer::ConstructComponents()
 		}
 
 		T obj{};
-
+		
+		if (i < 1)
+		{
+			DynamicMemory = ((Component*)&obj)->UsesDynamicMemory();
+		}
+		
 		memmove(&m_data[m_data.size() - m_stride], &obj, sizeof(T));
+
+		((Component*)&m_data[m_data.size() - m_stride])->SafetyChecks(&obj);
+
+		/*
+		if (DynamicMemory == false)
+		{
+			continue;
+		}
+		*/
+		//T& ref = *(T*) & m_data[m_data.size() - m_stride];
+		//ref = std::move(obj);
+		//(T)*(T*)(&m_data[m_data.size() - m_stride]) = std::move(obj);
+		
 	}
 }
 
@@ -134,6 +156,7 @@ inline void ECContainer::AddComponent(unsigned int Entity, bool IsRunning)
 
 	memmove(&m_data[m_data.size() - m_stride], &obj, sizeof(T));
 	*/
+	/*
 	assert(m_entityToCompMap.find(Entity) == m_entityToCompMap.end());
 	assert(m_size < m_capacity);
 
@@ -147,6 +170,8 @@ inline void ECContainer::AddComponent(unsigned int Entity, bool IsRunning)
 	}
 
 	m_entityToCompMap.emplace(Entity, m_size - 1);
+	*/
+	AddComponent(Entity, IsRunning, sizeof(T));
 }
 template<typename T>
 inline void ECS::AddComponent(unsigned int Entity)
@@ -159,9 +184,9 @@ inline void ECS::AddComponent(unsigned int Entity)
 	*/
 	assert(m_compContainers.find(sizeof(T)) != m_compContainers.end(), "Forgot to register Component");
 
-	m_entities.emplace(std::make_pair(Entity, "NewEntity"));
-
 	m_compContainers.find(sizeof(T))->second.AddComponent<T>(Entity, m_isRunning);
+
+	m_entities.emplace(std::make_pair(Entity, "NewEntity"));
 }
 
 template<typename T>

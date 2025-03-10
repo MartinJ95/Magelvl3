@@ -5,6 +5,7 @@ ECS* EcsInstance = nullptr;
 
 void ECContainer::AddComponent(const unsigned int Entity, const bool IsRunning, const unsigned int CompSize)
 {
+	/*
 	assert(m_entityToCompMap.find(Entity) == m_entityToCompMap.end());
 
 	size_t currentCapactity = m_data.capacity();
@@ -39,6 +40,21 @@ void ECContainer::AddComponent(const unsigned int Entity, const bool IsRunning, 
 	}
 
 	m_entityToCompMap.emplace(Entity, (m_data.size() / m_stride) - 1);
+	*/
+	assert(m_entityToCompMap.find(Entity) == m_entityToCompMap.end());
+	assert(m_size < m_capacity);
+
+	m_size++;
+	Component* c = (Component*)(&m_data[m_size * m_stride - m_stride]);
+	c->AssignEntity(Entity);
+
+	if (IsRunning)
+	{
+		//Component* c = (Component*)(&obj);
+		c->BeginPlay();
+	}
+
+	m_entityToCompMap.emplace(Entity, m_size - 1);
 }
 
 void ECContainer::CleanComponents()
@@ -46,11 +62,9 @@ void ECContainer::CleanComponents()
 	if (!m_dirty)
 		return;
 
-	for (int i = 0; i / m_stride < m_data.size() / m_stride; i += m_stride)
+	for (int i = 0; i < m_size; i++)
 	{
-		//todo
-		//clean component individual
-		Component* obj = (Component*)(&m_data[i]);
+		Component* obj = (Component*)(&m_data[i*m_stride]);
 		obj->CleanComponent();
 	}
 
@@ -87,10 +101,10 @@ void ECS::UpdateComponents(float DeltaTime)
 {
 	for (auto& container : m_compContainers)
 	{
-		for (int i = 0; i/container.first < container.second.m_data.size() / container.first; i+=container.first)
+		for (int i = 0; i < container.second.m_size; i++)
 		{
 			//static_cast<T>(container.second.m_data[i]).Update(DeltaTime);
-			Component* obj = (Component*)(&container.second.m_data[i]);
+			Component* obj = (Component*)(&container.second.m_data[i * container.first]);
 			obj->Update(DeltaTime);
 			//i += container.first;
 		}
@@ -102,10 +116,10 @@ void ECS::LateUpdate()
 	for (auto& container : m_compContainers)
 	{
 		container.second.CleanComponents();
-		for (int i = 0; i / container.first < container.second.m_data.size() / container.first; i += container.first)
+		for (int i = 0; i < container.second.m_size; i++)
 		{
 			//static_cast<T>(container.second.m_data[i]).Update(DeltaTime);
-			Component* obj = (Component*)(&container.second.m_data[i]);
+			Component* obj = (Component*)(&container.second.m_data[i * container.first]);
 			obj->LateUpdate();
 			//i += container.first;
 		}
@@ -116,12 +130,11 @@ void ECS::UpdateComponentsInput(const int Key, const int Scancode, const int Act
 {
 	for (auto& container : m_compContainers)
 	{
-		for (int i = 0; i < container.second.m_data.size() / container.first;)
+		for (int i = 0; i < container.second.m_size; i++)
 		{
 			//static_cast<T>(container.second.m_data[i]).Update(DeltaTime);
-			Component* obj = (Component*)(&container.second.m_data[i]);
+			Component* obj = (Component*)(&container.second.m_data[i * container.second.m_stride]);
 			obj->OnInput(Key, Scancode, Action, Mods);
-			i += container.first;
 		}
 	}
 }
@@ -131,12 +144,11 @@ void ECS::BeginPlay()
 	m_isRunning = true;
 	for (auto& container : m_compContainers)
 	{
-		for (int i = 0; i < container.second.m_data.size() / container.first;)
+		for (int i = 0; i < container.second.m_size; i++)
 		{
 			//static_cast<T>(container.second.m_data[i]).Update(DeltaTime);
-			Component* obj = (Component*)(&container.second.m_data[i]);
+			Component* obj = (Component*)(&container.second.m_data[i * container.first]);
 			obj->BeginPlay();
-			i += container.first;
 		}
 	}
 }

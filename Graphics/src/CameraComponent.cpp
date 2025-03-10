@@ -5,15 +5,13 @@
 #include "ECS.h"
 #include "Transform.h"
 
-CameraComponent::CameraComponent() //: 
-	//m_position(0, 0, 0), m_rotation(0, 0, 0), m_FinalPosition(0,0,0), m_FinalRotation(0,0,0)
+CameraComponent::CameraComponent()
 {
-	
+	m_usesDynamicMemory = true;
 }
 
 void CameraComponent::BeginPlay()
 {
-	
 	for (int i = 0; i < m_keyMovementInputs.size(); i++)
 	{
 		m_keyMovementInputs[i].m_subject.AddSubscriber(&m_keyMovementInputs[i].m_observer);
@@ -116,4 +114,11 @@ void CameraComponent::CleanComponent()
 			m_keyMovementInputs[i].m_observer.SetControlledVector(GetEcsInstance().FindComponent<Transform>(m_entityID).GetRotationRef());
 		}
 	}
+}
+
+void CameraComponent::SafetyChecks(void* Other)
+{
+	CameraComponent& otherRef = *(CameraComponent*)Other;
+
+	*this = std::move(otherRef);
 }
