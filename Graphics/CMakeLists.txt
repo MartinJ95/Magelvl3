@@ -31,7 +31,7 @@ list(APPEND all_files
 	"${PROJECT_SOURCE_DIR}/Resources/include/imgui-1.91.8/imgui_widgets.cpp"
 	"${PROJECT_SOURCE_DIR}/Resources/include/imgui-1.91.8/imgui_draw.cpp"
 	"${PROJECT_SOURCE_DIR}/Resources/include/imgui-1.91.8/imgui_demo.cpp"
-	"${PROJECT_SOURCE_DIR}/Resources/include/imgui-1.91.8/imgui_demo.cpp"
+	"${PROJECT_SOURCE_DIR}/Resources/include/imgui-1.91.8/misc/cpp/imgui_stdlib.cpp"
 	"${PROJECT_SOURCE_DIR}/Resources/include/imgui-1.91.8/imgui.cpp"
 )
 elseif("${graphics_to_use}" STREQUAL "none")
