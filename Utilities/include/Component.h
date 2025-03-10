@@ -33,6 +33,10 @@ public:
 		InVec.emplace_back( std::make_pair(ComponentDecompositionTypes::eInt, "Entity")); 
 	}
 	void AssignEntity(const int EntityID);
+	const int GetEntity() const
+	{
+		return m_entityID;
+	}
 	bool UsesDynamicMemory() const 
 	{
 		return m_usesDynamicMemory; 
