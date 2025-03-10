@@ -576,6 +576,11 @@ void Renderer::Render(const float DeltaTime)
                         CompOffset++;
                         types.pop_back();
                     }
+
+                    if (ImGui::Button(((EcsInstance->m_componentNames.at(comp.first) + "removal").c_str())))
+                    {
+                        GetEcsInstance().RemoveComponent(comp.second->GetEntity(), comp.first);
+                    }
                     
                 }
 

@@ -57,6 +57,47 @@ void ECContainer::AddComponent(const unsigned int Entity, const bool IsRunning, 
 	m_entityToCompMap.emplace(Entity, m_size - 1);
 }
 
+void ECContainer::RemoveComponent(const unsigned int Entity)
+{
+
+	if (m_entityToCompMap.find(Entity)->second == m_size - 1)
+	{
+		m_entityToCompMap.erase(Entity);
+		m_size--;
+		return;
+	}
+
+	std::vector<char> temp;
+	temp.reserve(m_stride);
+
+	for (int i = 0; i < m_stride; i++)
+	{
+		temp.emplace_back();
+	}
+
+	//move last to temp
+	memmove(&temp[0], &m_data[(m_size - 1) * m_stride], m_stride);
+
+	// move entity to last
+	memmove(&m_data[(m_size-1) * m_stride], &m_data[m_entityToCompMap.find(Entity)->second * m_stride], m_stride);
+
+	// move temp to current
+	memmove(&m_data[m_entityToCompMap.find(Entity)->second * m_stride], &temp[0], m_stride);
+
+	for (auto& ent : m_entityToCompMap)
+	{
+		if (ent.second != m_size - 1)
+			continue;
+
+		ent.second = m_entityToCompMap.find(Entity)->second;
+		m_entityToCompMap.erase(Entity);
+
+		m_size--;
+
+		return;
+	}
+}
+
 void ECContainer::CleanComponents()
 {
 	if (!m_dirty)
@@ -169,4 +210,15 @@ void ECS::AddComponent(unsigned int Entity, unsigned int CompSize)
 	m_entities.emplace(std::make_pair(Entity, "NewEntity"));
 
 	m_compContainers.find(CompSize)->second.AddComponent(Entity, m_isRunning, CompSize);
+}
+
+void ECS::RemoveComponent(unsigned int Entity, unsigned int CompSize)
+{
+	assert(m_compContainers.find(CompSize) != m_compContainers.end());
+	
+	ECContainer& c = m_compContainers.find(CompSize)->second;
+
+	assert(c.m_entityToCompMap.find(Entity) != c.m_entityToCompMap.end());
+	
+	c.RemoveComponent(Entity);
 }

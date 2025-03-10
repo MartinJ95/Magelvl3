@@ -33,9 +33,10 @@ public:
 	template <typename T>
 	void AddComponent(unsigned int Entity, bool IsRunning);
 	void AddComponent(const unsigned int Entity, const bool IsRunning, const unsigned int CompSize = 0);
+	void RemoveComponent(const unsigned int Entity);
 	void CleanComponents();
 public:
-	int m_stride;
+	const int m_stride;
 	std::vector<char> m_data;
 	std::unordered_map<unsigned int, unsigned int> m_entityToCompMap;
 	Subject<int> m_dirtyEvent;
@@ -54,6 +55,7 @@ public:
 	template<typename T>
 	void AddComponent(unsigned int Entity);
 	void AddComponent(unsigned int Entity, unsigned int CompSize);
+	void RemoveComponent(unsigned int Entity, unsigned int CompSize);
 	template <typename T>
 	T& FindComponent(unsigned int Entity);
 	std::unordered_map<unsigned int, Component*> GetAllComponentsOfEntity(const unsigned int Entity) const;
