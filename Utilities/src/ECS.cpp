@@ -1,6 +1,45 @@
 #include "ECS.h"
 
+
 ECS* EcsInstance = nullptr;
+
+void ECContainer::AddComponent(const unsigned int Entity, const bool IsRunning, const unsigned int CompSize)
+{
+	assert(m_entityToCompMap.find(Entity) == m_entityToCompMap.end());
+
+	size_t currentCapactity = m_data.capacity();
+
+	for (int i = 0; i < m_stride; i++)
+	{
+		m_data.emplace_back();
+	}
+
+	if (currentCapactity < m_data.capacity())
+	{
+		m_dirty = true;
+	}
+
+	//T* base = (T)m_data.at(m_data.size() - m_stride);
+	//*base = T();
+
+	std::vector<char> objRaw(CompSize);
+	std::fill(objRaw.begin(), objRaw.end(), '0');
+
+	Component* obj = (Component*)&*objRaw.data();
+	//T obj{};
+	obj->AssignEntity(Entity);
+
+	memmove(&m_data[m_data.size() - m_stride], objRaw.data(), CompSize);
+
+	if (IsRunning)
+	{
+		//Component* c = (Component*)(&obj);
+		Component* c = (Component*)(&m_data[m_data.size() - m_stride]);
+		c->BeginPlay();
+	}
+
+	m_entityToCompMap.emplace(Entity, (m_data.size() / m_stride) - 1);
+}
 
 void ECContainer::CleanComponents()
 {
@@ -102,11 +141,20 @@ void ECS::BeginPlay()
 	}
 }
 
-ECContainer::ECContainer(int Stride) : m_stride(Stride), m_data(), m_entityToCompMap(), m_dirtyListener(*this)
+ECContainer::ECContainer(int Stride) : m_stride(Stride), m_data(), m_entityToCompMap(), m_dirtyListener(*this), m_size(0), m_capacity(ECCCapacity)
 {
 }
 
 void ECCObserver::OnNotify(const int& Data)
 {
 	m_parent->m_dirty = true;
+}
+
+void ECS::AddComponent(unsigned int Entity, unsigned int CompSize)
+{
+	assert(m_compContainers.find(CompSize) != m_compContainers.end(), "Forgot to register Component");
+
+	m_entities.emplace(std::make_pair(Entity, "NewEntity"));
+
+	m_compContainers.find(CompSize)->second.AddComponent(Entity, m_isRunning, CompSize);
 }
