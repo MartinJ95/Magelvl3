@@ -527,8 +527,23 @@ void Renderer::Render(const float DeltaTime)
 
                 std::unordered_map<unsigned int, Component*> comps = ecsystem.GetAllComponentsOfEntity(ent.first);
 
+                if (ImGui::BeginCombo("component addition", "Add Component"))
+                {
+                    // add component based on registered components
+
+                    for (auto& registeredComp : EcsInstance->m_componentNames)
+                    {
+                        if (ImGui::Button(registeredComp.second.c_str()))
+                        {
+                            EcsInstance->AddComponent(ent.first, registeredComp.first);
+                        }
+                    }
+                    ImGui::EndCombo();
+                }
+
                 for (auto& comp : comps)
                 {
+
                     std::vector<std::pair<ComponentDecompositionTypes, std::string>> types;
                     comp.second->GetDecompositions(types);
 
