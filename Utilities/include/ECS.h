@@ -56,6 +56,8 @@ public:
 	void AddComponent(unsigned int Entity);
 	void AddComponent(unsigned int Entity, unsigned int CompSize);
 	void RemoveComponent(unsigned int Entity, unsigned int CompSize);
+	void AddNewEntity();
+	void MarkEntityForRemoval(int Entity);
 	template <typename T>
 	T& FindComponent(unsigned int Entity);
 	std::unordered_map<unsigned int, Component*> GetAllComponentsOfEntity(const unsigned int Entity) const;
@@ -65,10 +67,13 @@ public:
 	void BeginPlay();
 	template <typename T, typename T1>
 	void AddComponentDependancy();
+protected:
+	void RemoveEntity(const int Entity);
 public:
 	std::unordered_map<unsigned int, ECContainer> m_compContainers;
 	std::unordered_map<unsigned int, std::string> m_entities;
 	std::unordered_map<unsigned int, std::string> m_componentNames;
+	std::vector<int> m_removingEntities;
 	bool m_isRunning;
 };
 

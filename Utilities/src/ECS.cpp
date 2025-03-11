@@ -165,6 +165,11 @@ void ECS::LateUpdate()
 			//i += container.first;
 		}
 	}
+	for (auto& ent : m_removingEntities)
+	{
+		RemoveEntity(ent);
+	}
+	m_removingEntities.clear();
 }
 
 void ECS::UpdateComponentsInput(const int Key, const int Scancode, const int Action, const int Mods)
@@ -221,4 +226,38 @@ void ECS::RemoveComponent(unsigned int Entity, unsigned int CompSize)
 	assert(c.m_entityToCompMap.find(Entity) != c.m_entityToCompMap.end());
 	
 	c.RemoveComponent(Entity);
+}
+
+void ECS::AddNewEntity()
+{
+	int currentCheck = 0;
+	bool found = false;
+	while (!found)
+	{
+		if (m_entities.find(currentCheck) != m_entities.end())
+		{
+			currentCheck++;
+			continue;
+		}
+
+		found = true;
+		m_entities.emplace(std::make_pair(currentCheck, "new entity"));
+	}
+}
+
+void ECS::MarkEntityForRemoval(int Entity)
+{
+	m_removingEntities.emplace_back(Entity);
+}
+
+void ECS::RemoveEntity(const int Entity)
+{
+	for (auto& comp : m_compContainers)
+	{
+		if (comp.second.m_entityToCompMap.find(Entity) == comp.second.m_entityToCompMap.end())
+			continue;
+
+		comp.second.RemoveComponent(Entity);
+	}
+	m_entities.erase(Entity);
 }

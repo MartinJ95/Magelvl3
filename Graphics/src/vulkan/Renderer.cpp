@@ -512,6 +512,12 @@ void Renderer::Render(const float DeltaTime)
     ImGui::ShowDemoWindow();
 
     ImGui::Begin("Entities");
+
+    if (ImGui::Button("AddNewEntity"))
+    {
+        GetEcsInstance().AddNewEntity();
+    }
+
     for (auto& ent : GetEcsInstance().m_entities)
     {
 
@@ -521,6 +527,12 @@ void Renderer::Render(const float DeltaTime)
         {
 
         }
+        if (ImGui::Button((std::string("RemoveEntity") + std::to_string(ent.first)).c_str()))
+        {
+            EcsInstance->MarkEntityForRemoval(ent.first);
+            
+        }
+
         if (ImGui::BeginCombo((entLabel + "combo").c_str(), ent.second.c_str()))
         {
             ECS& ecsystem = GetEcsInstance();
