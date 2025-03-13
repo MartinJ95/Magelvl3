@@ -152,6 +152,29 @@ m_vulkanInstance(
 {
     try
     {
+        m_modelDatas.insert(
+            {
+                2,
+                std::move(
+                    GraphicsModel(
+                        m_physicalDevice, m_device, GenerateBox(), {}
+                    )
+                )
+            }
+        );
+
+        m_modelDatas.insert(
+            {
+                3,
+                std::move(
+                    GraphicsModel(
+                        m_physicalDevice, m_device, GenerateSphere(), {}
+                    )
+                )
+            }
+        );
+            
+        
         /*
         
         std::vector<Vertex> cubeVertices{
@@ -400,7 +423,7 @@ vk::ResultValue<uint32_t> GraphicsRenderPass::OnRenderStart(const vk::Device &De
     return currentBuffer;
 }
 
-void GraphicsRenderPass::OnRenderObj(const vk::CommandBuffer& CommandBuffer, const vk::su::BufferData& Data, const vk::ResultValue<uint32_t>& CurrentBuffer, const vk::su::SurfaceData& SurfaceData)
+void GraphicsRenderPass::OnRenderObj(const vk::CommandBuffer& CommandBuffer, const vk::su::BufferData& Data, const vk::ResultValue<uint32_t>& CurrentBuffer, const vk::su::SurfaceData& SurfaceData, const int VertexCount)
 {
     CommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipelineLayout, 0, m_descriptorSets.at(m_usedModelsAmount-1), nullptr);
 
@@ -412,7 +435,8 @@ void GraphicsRenderPass::OnRenderObj(const vk::CommandBuffer& CommandBuffer, con
     CommandBuffer.setScissor(0, vk::Rect2D(vk::Offset2D(0, 0), SurfaceData.extent));
     */
     
-    CommandBuffer.draw(12 * 3, 1, 0, 0);
+    CommandBuffer.draw(VertexCount, 1, 0, 0);
+    //CommandBuffer.draw(12 * 3, 1, 0, 0);
 }
 
 void GraphicsRenderPass::OnRenderFinish(const vk::ResultValue<uint32_t> &CurrentBuffer, const vk::CommandBuffer& CommandBuffer, const vk::Device &Device, const vk::su::SwapChainData &SwapChainData, const vk::Queue &GraphicsQueue, const vk::Queue &PresentQueue)
@@ -634,7 +658,7 @@ void Renderer::Render(const float DeltaTime)
 
             
 
-                m_renderPasses.at(it.first).OnRenderObj(m_commandBuffer, m_modelDatas.at(0).m_vertexBufferData, CurrentBuffer, m_surfaceData);
+                m_renderPasses.at(it.first).OnRenderObj(m_commandBuffer, m_modelDatas.at(it1.first).m_vertexBufferData, CurrentBuffer, m_surfaceData, m_modelDatas.at(it1.first).m_vertices.size());
             }
         
             m_renderPasses.at(it.first).OnRenderFinish(CurrentBuffer, m_commandBuffer, m_device, m_swapChainData, m_graphicsQueue, m_presentQueue);

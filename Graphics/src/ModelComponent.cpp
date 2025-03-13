@@ -3,7 +3,7 @@
 #include "ECS.h"
 #include "Transform.h"
 
-ModelComponent::ModelComponent() : /*m_position(), m_rotation(),*/ m_modelID(0)
+ModelComponent::ModelComponent() : /*m_position(), m_rotation(),*/ m_modelID(3)
 {
 }
 

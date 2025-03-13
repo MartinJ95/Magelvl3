@@ -44,6 +44,8 @@ void main()
 }
 )";
 
+
+
 static std::string AppName = "01_InitInstance";
 static std::string EngineName = "Vulkan.hpp";
 
@@ -60,6 +62,146 @@ struct Vertex
 	glm::vec4 m_position;
 	glm::vec4 m_color;
 };
+
+static std::vector<Vertex> GenerateSphere()
+{
+	std::vector<Vertex> Verts;
+
+	glm::vec3 Up{ 0,1,0 };
+	glm::vec3 Forward{ 1,0,0 };
+	glm::vec3 Side{ 0,0,1 };
+
+	for (int i = 0; i < 2; i++)
+	{
+		glm::vec3 offset = Forward * 10.f * (i*2.f-1.f);
+		for (int j = 0; j < 50; j++)
+		{
+			for (int k = 0; k < 50; k++)
+			{
+				auto GetBasePosOffset = [](glm::vec4 Offset, int Index, float Size) -> glm::vec4
+					{
+						return Offset * (Index - Size * 0.5f);
+					};
+				
+				glm::vec4 Offset = glm::vec4(offset, 1);
+				glm::vec4 secondOffset = glm::vec4(Up, 1);
+				glm::vec4 thirdOffset = glm::vec4(Side, 1);
+
+
+				glm::vec4 basePos = Offset + GetBasePosOffset(secondOffset, j, 10.f) + GetBasePosOffset(thirdOffset, k, 10.f);
+
+				glm::vec4 col = glm::vec4(1, 0, 0, 1);
+
+				auto ApplyWrapAround = [&](glm::vec4& Pos)
+					{
+						float d = glm::abs(glm::dot(Side, glm::vec3(Pos.x, Pos.y, Pos.z)));
+						d = std::max(glm::abs(glm::dot(Up, glm::vec3(Pos.x, Pos.y, Pos.z))), d);
+
+						Pos += (Offset * glm::vec4(-1, -1, -1, 1)) * (d*0.2f);
+						//Pos *= 0.1f;
+						
+						Pos = glm::vec4(glm::normalize(glm::vec3(Pos.x, Pos.y, Pos.z)),1);
+					};
+
+				Verts.emplace_back(basePos, col);
+				ApplyWrapAround(Verts.back().m_position);
+				Verts.emplace_back((basePos + secondOffset), col);
+				ApplyWrapAround(Verts.back().m_position);
+				Verts.emplace_back((basePos + thirdOffset), col);
+				ApplyWrapAround(Verts.back().m_position);
+
+				Verts.emplace_back((basePos + secondOffset), col);
+				ApplyWrapAround(Verts.back().m_position);
+				Verts.emplace_back((basePos + secondOffset + thirdOffset), col);
+				ApplyWrapAround(Verts.back().m_position);
+				Verts.emplace_back((basePos + thirdOffset), col);
+				ApplyWrapAround(Verts.back().m_position);
+			}
+		}
+	}
+
+	return Verts;
+}
+
+static std::vector<Vertex> GenerateBox()
+{
+	std::vector<Vertex> Verts;
+
+	for (int i = 0; i < 6; i++)
+	{
+		int NormalDimension = 0;
+		if (i < 2)
+		{
+			NormalDimension = 0;
+		}
+		else if (i < 4)
+		{
+			NormalDimension = 1;
+		}
+		else
+		{
+			NormalDimension = 2;
+		}
+		int OtherDimensions[2]{ -1, -1 };
+		{
+			int CurrentTest = 0;
+			int CurrentDimension = 0;
+
+			while (OtherDimensions[1] == -1)
+			{
+				if (CurrentTest != NormalDimension)
+				{
+					OtherDimensions[CurrentDimension] = CurrentTest;
+					CurrentDimension++;
+				}
+				CurrentTest++;
+			}
+		}
+
+		glm::vec4 offset = glm::vec4(10, 10, 10, 1);
+		
+		offset *= glm::vec4(-2 * (i%2)+1, -2 * (i%2)+1, -2 * (i%2)+1, 1);
+
+		offset *= 0.5f;
+
+		glm::vec4 secondOffset = glm::vec4(0, 0, 0, 1);
+		secondOffset[OtherDimensions[0]] = 1;
+				
+		glm::vec4 thirdOffset = glm::vec4(0, 0, 0, 1);
+		thirdOffset[OtherDimensions[1]] = 1;
+
+		for (auto& Dimension : OtherDimensions)
+		{
+			offset[Dimension] = 0;
+		}
+
+		for (int j = 0; j < 10; j++)
+		{
+			for (int k = 0; k < 10; k++)
+			{
+			
+				auto GetBasePosOffset = [](glm::vec4 Offset, int Index, float Size) -> glm::vec4
+					{
+						return Offset * (Index - Size * 0.5f);
+					};
+
+				glm::vec4 basePos = offset + GetBasePosOffset(secondOffset, j, 10.f) + GetBasePosOffset(thirdOffset, k, 10.f);
+
+				glm::vec4 col = glm::vec4(1, 0, 0, 1);
+
+				Verts.emplace_back(basePos*0.1f, col);
+				Verts.emplace_back((basePos + secondOffset)*0.1f, col);
+				Verts.emplace_back((basePos + thirdOffset)*0.1f, col);
+
+				Verts.emplace_back((basePos + secondOffset)*0.1f, col);
+				Verts.emplace_back((basePos + secondOffset + thirdOffset)*0.1f, col);
+				Verts.emplace_back((basePos + thirdOffset)*0.1f, col);
+			}
+		}
+	}
+
+	return Verts;
+}
 
 struct GraphicsModel
 {
@@ -90,7 +232,7 @@ struct GraphicsModel
 	vk::su::BufferData m_vertexBufferData;
 };
 
-constexpr unsigned int ModelBufferAmount = 50*50*50+10;
+constexpr unsigned int ModelBufferAmount = 5*5*5+10;
 
 struct GraphicsRenderPass
 {
@@ -98,10 +240,11 @@ struct GraphicsRenderPass
 	glm::mat4 GetViewProjectionMatrix(const vk::su::SurfaceData& SurfaceData, const glm::mat4& CamMatrix);
 	void SetUniformDataModelViewProjection(const glm::mat4& projectionViewMatrix,const vk::su::SurfaceData& SurfaceData, const vk::PhysicalDevice& PhysicalDevice, const vk::Device& Device, const glm::mat4x4& ModelMatrix, const glm::mat4x4& CamMatrix, const bool ShouldUpdate);
 	vk::ResultValue<uint32_t> OnRenderStart(const vk::Device& Device, vk::su::SwapChainData& SwapChainData, vk::CommandBuffer& CommandBuffer, vk::su::SurfaceData& SurfaceData);
-	void OnRenderObj(const vk::CommandBuffer& CommandBuffer, const vk::su::BufferData& Data, const vk::ResultValue<uint32_t>& ResultValue, const vk::su::SurfaceData& SurfaceData);
+	void OnRenderObj(const vk::CommandBuffer& CommandBuffer, const vk::su::BufferData& Data, const vk::ResultValue<uint32_t>& ResultValue, const vk::su::SurfaceData& SurfaceData, const int VertexCount);
 	void OnRenderFinish(const vk::ResultValue<uint32_t>& CurrentBuffer, const vk::CommandBuffer& CommandBuffer, const vk::Device& Device, const vk::su::SwapChainData& SwapChainData, const vk::Queue& GraphicsQueue, const vk::Queue& PresentQueue);
 	void CleanUp(const vk::Device& Device);
 	~GraphicsRenderPass();
+public:
 	std::vector<unsigned int> m_modelID;
 	glm::mat4x4 m_mvpcMatrix;
 	vk::su::DepthBufferData m_depthBufferData;

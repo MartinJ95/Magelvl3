@@ -34,7 +34,7 @@ void Application::Initialise()
 
 	m_entCompSyst.RegisterComponent<ModelComponent>("Model");
 	m_entCompSyst.RegisterComponent<RigidBody>("RigidBody");
-	constexpr int stressTestNum = 20;
+	constexpr int stressTestNum = 5;
 	for (int i = 0; i < stressTestNum; i++)
 	{
 		for (int j = 0; j < stressTestNum; j++)
