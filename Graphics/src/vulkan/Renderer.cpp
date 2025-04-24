@@ -641,7 +641,7 @@ void Renderer::Render(const float DeltaTime)
 
             vk::ResultValue<uint32_t> CurrentBuffer = m_renderPasses.at(RenderTarget.first).OnRenderStart(m_device, m_swapChainData, m_commandBuffer, m_surfaceData);
 
-            glm::mat4 viewProjection = m_renderPasses.at(ModelAndTransforms.first).GetViewProjectionMatrix(m_surfaceData, m_camMatrix);
+            glm::mat4 viewProjection = m_renderPasses.at(RenderTarget.first).GetViewProjectionMatrix(m_surfaceData, m_camMatrix);
 
             m_commandBuffer.setViewport(
                 0, vk::Viewport(0.0f, 0.0f, static_cast<float>(m_surfaceData.extent.width), static_cast<float>(m_surfaceData.extent.height), 0.0f, 1.0f));
@@ -655,8 +655,6 @@ void Renderer::Render(const float DeltaTime)
                 ModelAndTransforms.second.pop();
 
                 m_renderPasses.at(RenderTarget.first).SetUniformDataModelViewProjection(viewProjection, m_surfaceData, m_physicalDevice, m_device, Transform, m_camMatrix, m_shouldUpdateDescriptor);
-
-            
 
                 m_renderPasses.at(RenderTarget.first).OnRenderObj(m_commandBuffer, m_modelDatas.at(ModelAndTransforms.first).m_vertexBufferData, CurrentBuffer, m_surfaceData, m_modelDatas.at(ModelAndTransforms.first).m_vertices.size());
             }
