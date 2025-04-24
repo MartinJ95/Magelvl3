@@ -631,37 +631,37 @@ void Renderer::Render(const float DeltaTime)
     //ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), m_commandBuffer);
     // 
     
-    for (auto& it : m_renderingTargets)
+    for (auto& RenderTarget : m_renderingTargets)
     {
-        for (auto& it1 : it.second)
+        for (auto& ModelAndTransforms : RenderTarget.second)
         {
 
             int lastUsed = -1;
             int Current = 0;
 
-            vk::ResultValue<uint32_t> CurrentBuffer = m_renderPasses.at(it.first).OnRenderStart(m_device, m_swapChainData, m_commandBuffer, m_surfaceData);
+            vk::ResultValue<uint32_t> CurrentBuffer = m_renderPasses.at(RenderTarget.first).OnRenderStart(m_device, m_swapChainData, m_commandBuffer, m_surfaceData);
 
-            glm::mat4 viewProjection = m_renderPasses.at(it.first).GetViewProjectionMatrix(m_surfaceData, m_camMatrix);
+            glm::mat4 viewProjection = m_renderPasses.at(ModelAndTransforms.first).GetViewProjectionMatrix(m_surfaceData, m_camMatrix);
 
             m_commandBuffer.setViewport(
                 0, vk::Viewport(0.0f, 0.0f, static_cast<float>(m_surfaceData.extent.width), static_cast<float>(m_surfaceData.extent.height), 0.0f, 1.0f));
 
             m_commandBuffer.setScissor(0, vk::Rect2D(vk::Offset2D(0, 0), m_surfaceData.extent));
 
-            while (it1.second.size() > 0)
+            while (ModelAndTransforms.second.size() > 0)
             {
-                glm::mat4x4 Transform = it1.second.front();
+                glm::mat4x4 Transform = ModelAndTransforms.second.front();
                 
-                it1.second.pop();
+                ModelAndTransforms.second.pop();
 
-                m_renderPasses.at(it.first).SetUniformDataModelViewProjection(viewProjection, m_surfaceData, m_physicalDevice, m_device, Transform, m_camMatrix, m_shouldUpdateDescriptor);
+                m_renderPasses.at(RenderTarget.first).SetUniformDataModelViewProjection(viewProjection, m_surfaceData, m_physicalDevice, m_device, Transform, m_camMatrix, m_shouldUpdateDescriptor);
 
             
 
-                m_renderPasses.at(it.first).OnRenderObj(m_commandBuffer, m_modelDatas.at(it1.first).m_vertexBufferData, CurrentBuffer, m_surfaceData, m_modelDatas.at(it1.first).m_vertices.size());
+                m_renderPasses.at(RenderTarget.first).OnRenderObj(m_commandBuffer, m_modelDatas.at(ModelAndTransforms.first).m_vertexBufferData, CurrentBuffer, m_surfaceData, m_modelDatas.at(ModelAndTransforms.first).m_vertices.size());
             }
         
-            m_renderPasses.at(it.first).OnRenderFinish(CurrentBuffer, m_commandBuffer, m_device, m_swapChainData, m_graphicsQueue, m_presentQueue);
+            m_renderPasses.at(RenderTarget.first).OnRenderFinish(CurrentBuffer, m_commandBuffer, m_device, m_swapChainData, m_graphicsQueue, m_presentQueue);
         }
     m_shouldUpdateDescriptor = false;
     }
