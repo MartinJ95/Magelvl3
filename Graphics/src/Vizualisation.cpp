@@ -28,7 +28,7 @@ bool Vizualisation::WindowShouldClose() const
 
 void Vizualisation::OnGUIStart()
 {
-    m_renderer.OnGUIStart();
+    //m_renderer.OnGUIStart();
 }
 
 Vizualisation::~Vizualisation()

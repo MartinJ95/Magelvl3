@@ -513,123 +513,7 @@ void Renderer::Render(const float DeltaTime)
         m_shouldUpdateDescriptor = true;
     }
 
-    ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue;
-
-    ImGui_ImplVulkan_NewFrame();
-    ImGui_ImplGlfw_NewFrame();
-    //ImGui::GetIO().DisplaySize = ImVec2(100, 100);
-    ImGui::NewFrame();
-    ImGui::Begin("first attempt");
-    //if (ImGui::BeginMenu("File"))
-    //{
-    //    if (ImGui::MenuItem("open")) {}
-    //}
-    //ImGui::EndMenu();
-    static glm::vec4 my_color{ 0 };
-    if (ImGui::ColorEdit4("Color", (float*)&my_color)) {}
-    if (ImGui::SliderFloat("Gravity", &GetPhysicsInstance().m_gravityScale, -10, 10)) {}
-    if (ImGui::InputFloat3("World Dir",
-        (float*) & GetPhysicsInstance().m_downVec)) {
-    }
-    if (ImGui::InputFloat3("CamPos", (float*)&GetEcsInstance().FindComponent<Transform>(0).GetPositionRef())) {}
-    ImGui::End();
-    ImGui::ShowDemoWindow();
-
-    ImGui::Begin("Entities");
-
-    if (ImGui::Button("AddNewEntity"))
-    {
-        GetEcsInstance().AddNewEntity();
-    }
-
-    for (auto& ent : GetEcsInstance().m_entities)
-    {
-
-        std::string entLabel = std::to_string(ent.first);
-
-        if (ImGui::InputText(entLabel.c_str(), &ent.second, flags))
-        {
-
-        }
-        if (ImGui::Button((std::string("RemoveEntity") + std::to_string(ent.first)).c_str()))
-        {
-            EcsInstance->MarkEntityForRemoval(ent.first);
-            
-        }
-
-        if (ImGui::BeginCombo((entLabel + "combo").c_str(), ent.second.c_str()))
-        {
-            ECS& ecsystem = GetEcsInstance();
-
-                std::unordered_map<unsigned int, Component*> comps = ecsystem.GetAllComponentsOfEntity(ent.first);
-
-                if (ImGui::BeginCombo("component addition", "Add Component"))
-                {
-                    // add component based on registered components
-
-                    for (auto& registeredComp : EcsInstance->m_componentNames)
-                    {
-                        if (ImGui::Button(registeredComp.second.c_str()))
-                        {
-                            EcsInstance->AddComponent(ent.first, registeredComp.first);
-                        }
-                    }
-                    ImGui::EndCombo();
-                }
-
-                for (auto& comp : comps)
-                {
-
-                    std::vector<std::pair<ComponentDecompositionTypes, std::string>> types;
-                    comp.second->GetDecompositions(types);
-
-                    unsigned int offset = sizeof(char)*8;
-                    
-                    while (!types.empty())
-                    {
-                        char* data = (char*)comp.second;
-                        data += offset;
-
-                        unsigned int CompOffset = 0;
-
-                        switch (types.back().first)
-                        {
-                        case ComponentDecompositionTypes::eInt:
-                            ImGui::InputInt((EcsInstance->m_componentNames.at(comp.first) + entLabel + "o" + std::to_string(offset) + types.back().second).c_str(), (int*)data);
-                            offset += (sizeof(int) / sizeof(char));
-                            break;
-                        case ComponentDecompositionTypes::eBool:
-                            break;
-                        case ComponentDecompositionTypes::eFloat3:
-                            ImGui::InputFloat3((EcsInstance->m_componentNames.at(comp.first) + entLabel + "o" + std::to_string(offset) + types.back().second).c_str(), (float*)data);
-                            offset += (sizeof(float) / sizeof(char)) * 3;
-                            break;
-                        case ComponentDecompositionTypes::ePad:
-                            offset += (sizeof(char));
-                            default:
-                                break;
-                        }
-                        CompOffset++;
-                        types.pop_back();
-                    }
-
-                    if (ImGui::Button(((EcsInstance->m_componentNames.at(comp.first) + "removal").c_str())))
-                    {
-                        GetEcsInstance().RemoveComponent(comp.second->GetEntity(), comp.first);
-                    }
-                    
-                }
-
-            ImGui::EndCombo();
-        }
-    }
-    ImGui::End();
-    ImGui::Render();
-    ImGui::EndFrame();
-    
-    //works but doesnt at same time
-    //ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), m_commandBuffer);
-    // 
+    OnGUI();
     
     for (auto& RenderTarget : m_renderingTargets)
     {
@@ -676,7 +560,7 @@ void Renderer::PollEvents()
     glfwPollEvents();
 }
 
-void Renderer::OnGUIStart()
+void Renderer::OnGUI()
 {
     //ImGui_ImplVulkan_InitInfo info;
     //ImGui_ImplVulkan_Init(&info);
@@ -693,7 +577,123 @@ void Renderer::OnGUIStart()
     ImGui::End();
     ImGui::EndFrame();
     */
-    
+    ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue;
+
+    ImGui_ImplVulkan_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    //ImGui::GetIO().DisplaySize = ImVec2(100, 100);
+    ImGui::NewFrame();
+    ImGui::Begin("first attempt");
+    //if (ImGui::BeginMenu("File"))
+    //{
+    //    if (ImGui::MenuItem("open")) {}
+    //}
+    //ImGui::EndMenu();
+    static glm::vec4 my_color{ 0 };
+    if (ImGui::ColorEdit4("Color", (float*)&my_color)) {}
+    if (ImGui::SliderFloat("Gravity", &GetPhysicsInstance().m_gravityScale, -10, 10)) {}
+    if (ImGui::InputFloat3("World Dir",
+        (float*)&GetPhysicsInstance().m_downVec)) {
+    }
+    if (ImGui::InputFloat3("CamPos", (float*)&GetEcsInstance().FindComponent<Transform>(0).GetPositionRef())) {}
+    ImGui::End();
+    ImGui::ShowDemoWindow();
+
+    ImGui::Begin("Entities");
+
+    if (ImGui::Button("AddNewEntity"))
+    {
+        GetEcsInstance().AddNewEntity();
+    }
+
+    for (auto& ent : GetEcsInstance().m_entities)
+    {
+
+        std::string entLabel = std::to_string(ent.first);
+
+        if (ImGui::InputText(entLabel.c_str(), &ent.second, flags))
+        {
+
+        }
+        if (ImGui::Button((std::string("RemoveEntity") + std::to_string(ent.first)).c_str()))
+        {
+            EcsInstance->MarkEntityForRemoval(ent.first);
+
+        }
+
+        if (ImGui::BeginCombo((entLabel + "combo").c_str(), ent.second.c_str()))
+        {
+            ECS& ecsystem = GetEcsInstance();
+
+            std::unordered_map<unsigned int, Component*> comps = ecsystem.GetAllComponentsOfEntity(ent.first);
+
+            if (ImGui::BeginCombo("component addition", "Add Component"))
+            {
+                // add component based on registered components
+
+                for (auto& registeredComp : EcsInstance->m_componentNames)
+                {
+                    if (ImGui::Button(registeredComp.second.c_str()))
+                    {
+                        EcsInstance->AddComponent(ent.first, registeredComp.first);
+                    }
+                }
+                ImGui::EndCombo();
+            }
+
+            for (auto& comp : comps)
+            {
+
+                std::vector<std::pair<ComponentDecompositionTypes, std::string>> types;
+                comp.second->GetDecompositions(types);
+
+                unsigned int offset = sizeof(char) * 8;
+
+                while (!types.empty())
+                {
+                    char* data = (char*)comp.second;
+                    data += offset;
+
+                    unsigned int CompOffset = 0;
+
+                    switch (types.back().first)
+                    {
+                    case ComponentDecompositionTypes::eInt:
+                        ImGui::InputInt((EcsInstance->m_componentNames.at(comp.first) + entLabel + "o" + std::to_string(offset) + types.back().second).c_str(), (int*)data);
+                        offset += (sizeof(int) / sizeof(char));
+                        break;
+                    case ComponentDecompositionTypes::eBool:
+                        break;
+                    case ComponentDecompositionTypes::eFloat3:
+                        ImGui::InputFloat3((EcsInstance->m_componentNames.at(comp.first) + entLabel + "o" + std::to_string(offset) + types.back().second).c_str(), (float*)data);
+                        offset += (sizeof(float) / sizeof(char)) * 3;
+                        break;
+                    case ComponentDecompositionTypes::ePad:
+                        offset += (sizeof(char));
+                    default:
+                        break;
+                    }
+                    CompOffset++;
+                    types.pop_back();
+                }
+
+                if (ImGui::Button(((EcsInstance->m_componentNames.at(comp.first) + "removal").c_str())))
+                {
+                    GetEcsInstance().RemoveComponent(comp.second->GetEntity(), comp.first);
+                }
+
+            }
+
+            ImGui::EndCombo();
+        }
+    }
+    ImGui::End();
+    ImGui::Render();
+    ImGui::EndFrame();
+
+    //works but doesnt at same time
+    //ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), m_commandBuffer);
+    //
 }
 
 Renderer::~Renderer()

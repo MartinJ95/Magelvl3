@@ -285,7 +285,7 @@ public:
 	void Render(const float DeltaTime) override final;
 	bool WindowShouldClose() const override final;
 	void PollEvents() override final;
-	void OnGUIStart();
+	void OnGUI();
 	~Renderer();
 public:
 	vk::Instance m_vulkanInstance;
