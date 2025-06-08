@@ -32,6 +32,11 @@ layout(std140, binding = 0) uniform buffer
 	mat4 mvp;
 } uniformBuffer;
 
+//layout(std140, binding = 1) uniform buffer
+//{
+//	Sampler2D diffuse;
+//} uniformTextureBuffer;
+
 layout(location = 0) in vec4 pos;
 layout(location = 1) in vec4 inColor;
 
@@ -58,9 +63,10 @@ static void KeyCallback(GLFWwindow* window, int key, int scancode, int action, i
 
 struct Vertex
 {
-	Vertex(glm::vec4 Position, glm::vec4 Color) : m_position(Position), m_color(Color) {}
+	Vertex(glm::vec4 Position, glm::vec4 Color) : m_position(Position), m_color(Color), m_uv() {}
 	glm::vec4 m_position;
 	glm::vec4 m_color;
+	glm::vec2 m_uv;
 };
 
 static std::vector<Vertex> GenerateSphere()
@@ -206,10 +212,62 @@ static std::vector<Vertex> GenerateBox()
 struct GraphicsModel
 {
 	GraphicsModel(vk::PhysicalDevice& PhysicalDevice, vk::Device& Device,  std::vector<Vertex>&& Vertices, std::vector<unsigned int>&& Elements) :
-		m_vertices(Vertices), m_elements(Elements), m_vertexBufferData(PhysicalDevice, Device, sizeof(Vertex) * m_vertices.size(), vk::BufferUsageFlagBits::eVertexBuffer)
+		m_vertices(Vertices), m_elements(Elements)/*, m_vertexBufferData(PhysicalDevice, Device, sizeof(Vertex)* m_vertices.size(), vk::BufferUsageFlagBits::eVertexBuffer)*/
 	{
-		vk::su::copyToDevice(Device, m_vertexBufferData.deviceMemory, (VertexPC*)&m_vertices[0], m_vertices.size() /*sizeof(coloredCubeData) / sizeof(coloredCubeData[0])*/);
+		VkBufferCreateInfo bufferInfo{};
+		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+		bufferInfo.size = sizeof(m_vertices[0]) * m_vertices.size();
+		bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+		if (vkCreateBuffer(Device, &bufferInfo, nullptr, &m_vertexBuffer) != VK_SUCCESS)
+		{
+			throw std::runtime_error("failed to create vertex buffer");
+		}
+
+		VkMemoryRequirements memRequirements;
+		vkGetBufferMemoryRequirements(Device, m_vertexBuffer, &memRequirements);
+
+		auto& findMemoryType = [&](uint32_t typeFilter, VkMemoryPropertyFlags properties) -> uint32_t {
+			VkPhysicalDeviceMemoryProperties memProperties;
+			vkGetPhysicalDeviceMemoryProperties(PhysicalDevice, &memProperties);
+
+			for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++)
+			{
+				if ((typeFilter & (1 << i)) &&
+					(memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+					return i;
+				}
+			}
+
+			throw std::runtime_error("failed to find suitable memory type");
+
+			};
+
+		VkMemoryAllocateInfo allocInfo{};
+		allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+		allocInfo.allocationSize = memRequirements.size;
+		allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+		if (vkAllocateMemory(Device, &allocInfo, nullptr, &m_vertexBufferMemory) != VK_SUCCESS)
+		{
+			throw std::runtime_error("failed to allocate vertex buffer memory!");
+		}
+
+		vkBindBufferMemory(Device, m_vertexBuffer, m_vertexBufferMemory, 0);
+
+		void* data;
+		vkMapMemory(Device, m_vertexBufferMemory, 0, bufferInfo.size, 0, &data);
+		memcpy(data, m_vertices.data(), (size_t)bufferInfo.size);
+		vkUnmapMemory(Device, m_vertexBufferMemory);
+
+		//vk::su::copyToDevice(Device, m_vertexBufferData.deviceMemory, (VertexPC*)&m_vertices[0], m_vertices.size() /*sizeof(coloredCubeData) / sizeof(coloredCubeData[0])*/);
 	}
+	GraphicsModel(const GraphicsModel& other) = delete;
+	GraphicsModel(GraphicsModel&& other) = delete;
+	void operator = (const GraphicsModel & other) = delete;
+	void operator=(GraphicsModel&& other) = delete;
+	/*
 	GraphicsModel(const vk::su::BufferData& Data) : 
 		m_vertexBufferData(Data) {}
 	GraphicsModel(vk::su::BufferData&& Data) : 
@@ -226,10 +284,13 @@ struct GraphicsModel
 	{
 		m_vertexBufferData = std::move(Data);
 	}
+	*/
 	unsigned int m_renderingPassId;
 	std::vector<Vertex> m_vertices;
 	std::vector<unsigned int> m_elements;
-	vk::su::BufferData m_vertexBufferData;
+	//vk::su::BufferData m_vertexBufferData;
+	VkBuffer m_vertexBuffer;
+	VkDeviceMemory m_vertexBufferMemory;
 };
 
 constexpr unsigned int ModelBufferAmount = 5*5*5+10;
@@ -240,7 +301,7 @@ struct GraphicsRenderPass
 	glm::mat4 GetViewProjectionMatrix(const vk::su::SurfaceData& SurfaceData, const glm::mat4& CamMatrix);
 	void SetUniformDataModelViewProjection(const glm::mat4& projectionViewMatrix,const vk::su::SurfaceData& SurfaceData, const vk::PhysicalDevice& PhysicalDevice, const vk::Device& Device, const glm::mat4x4& ModelMatrix, const glm::mat4x4& CamMatrix, const bool ShouldUpdate);
 	vk::ResultValue<uint32_t> OnRenderStart(const vk::Device& Device, vk::su::SwapChainData& SwapChainData, vk::CommandBuffer& CommandBuffer, vk::su::SurfaceData& SurfaceData);
-	void OnRenderObj(const vk::CommandBuffer& CommandBuffer, const vk::su::BufferData& Data, const vk::ResultValue<uint32_t>& ResultValue, const vk::su::SurfaceData& SurfaceData, const int VertexCount);
+	void OnRenderObj(const vk::CommandBuffer& CommandBuffer, const VkBuffer& VertexBuffer, const std::vector<Vertex> VertData, const vk::ResultValue<uint32_t>& ResultValue, const vk::su::SurfaceData& SurfaceData, const int VertexCount);
 	void OnRenderFinish(const vk::ResultValue<uint32_t>& CurrentBuffer, const vk::CommandBuffer& CommandBuffer, const vk::Device& Device, const vk::su::SwapChainData& SwapChainData, const vk::Queue& GraphicsQueue, const vk::Queue& PresentQueue);
 	void CleanUp(const vk::Device& Device);
 	~GraphicsRenderPass();

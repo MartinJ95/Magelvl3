@@ -35,3 +35,9 @@ struct Cylinder
 	float Height;
 	float Radius;
 };
+
+struct Plane
+{
+	Vector3 Point;
+	Vector3 Direction;
+};

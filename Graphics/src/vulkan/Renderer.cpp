@@ -59,15 +59,18 @@ m_vulkanInstance(
         {},
         m_graphicsAndPresentQueueFamilyIndex.first,
         m_graphicsAndPresentQueueFamilyIndex.second),
-    m_modelDatas(
+    m_modelDatas(/*
         {
             
             {
                 0,
+                {m_physicalDevice, m_device, std::move()}
+                
                 std::move(vk::su::BufferData(m_physicalDevice,
                 m_device,
                 sizeof(coloredCubeData),
                 vk::BufferUsageFlagBits::eVertexBuffer))
+                
             },
             
             {
@@ -126,7 +129,7 @@ m_vulkanInstance(
                  std::move(std::vector<unsigned int>()))
                  )
             }
-        }
+        }*/
     ),
     m_renderingTargets(
         {
@@ -152,7 +155,21 @@ m_vulkanInstance(
 {
     try
     {
-        m_modelDatas.insert(
+        m_modelDatas.emplace(
+            std::piecewise_construct, std::forward_as_tuple(0),
+            std::forward_as_tuple(m_physicalDevice,
+            m_device,
+            GenerateBox(),
+            std::vector<unsigned int>())
+
+        );
+        m_modelDatas.emplace(
+            std::piecewise_construct,
+            std::forward_as_tuple(1),
+            std::forward_as_tuple(m_physicalDevice,
+            m_device,
+            GenerateSphere(),
+            std::vector<unsigned int>())/*
             {
                 2,
                 std::move(
@@ -161,9 +178,10 @@ m_vulkanInstance(
                     )
                 )
             }
+            */
         );
-
-        m_modelDatas.insert(
+        /*
+        m_modelDatas.emplace(
             {
                 3,
                 std::move(
@@ -173,6 +191,7 @@ m_vulkanInstance(
                 )
             }
         );
+        */
             
         
         /*
@@ -262,7 +281,7 @@ m_vulkanInstance(
 #if !defined( NDEBUG )
         //vk::DebugUtilsMessengerEXT debugUtilsMessenger = instance.createDebugUtilsMessengerEXT(vk::su::makeDebugUtilsMessengerCreateInfoEXT());
 #endif
-        vk::su::copyToDevice(m_device, m_modelDatas.at(0).m_vertexBufferData.deviceMemory, coloredCubeData, sizeof(coloredCubeData) / sizeof(coloredCubeData[0]));
+        //vk::su::copyToDevice(m_device, m_modelDatas.at(0).m_vertexBufferData.deviceMemory, coloredCubeData, sizeof(coloredCubeData) / sizeof(coloredCubeData[0]));
     }
     catch (vk::SystemError& err)
     {
@@ -423,11 +442,18 @@ vk::ResultValue<uint32_t> GraphicsRenderPass::OnRenderStart(const vk::Device &De
     return currentBuffer;
 }
 
-void GraphicsRenderPass::OnRenderObj(const vk::CommandBuffer& CommandBuffer, const vk::su::BufferData& Data, const vk::ResultValue<uint32_t>& CurrentBuffer, const vk::su::SurfaceData& SurfaceData, const int VertexCount)
+void GraphicsRenderPass::OnRenderObj(const vk::CommandBuffer& CommandBuffer, const VkBuffer& VertexBuffer, const std::vector<Vertex> VertData, const vk::ResultValue<uint32_t>& CurrentBuffer, const vk::su::SurfaceData& SurfaceData, const int VertexCount)
 {
     CommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipelineLayout, 0, m_descriptorSets.at(m_usedModelsAmount-1), nullptr);
 
-    CommandBuffer.bindVertexBuffers(0, Data.buffer,{0});
+    //CommandBuffer.bindVertexBuffers(0, Data.buffer,{0});
+
+    VkBuffer vertexBuffers[] = { VertexBuffer };
+    VkDeviceSize offsets[] = { 0 };
+
+    vkCmdBindVertexBuffers(CommandBuffer, 0, 1, vertexBuffers, offsets);
+
+    vkCmdDraw(CommandBuffer, static_cast<uint32_t>(VertData.size()), 1, 0, 0);
 
     /*
     CommandBuffer.setViewport(
@@ -540,7 +566,7 @@ void Renderer::Render(const float DeltaTime)
 
                 m_renderPasses.at(RenderTarget.first).SetUniformDataModelViewProjection(viewProjection, m_surfaceData, m_physicalDevice, m_device, Transform, m_camMatrix, m_shouldUpdateDescriptor);
 
-                m_renderPasses.at(RenderTarget.first).OnRenderObj(m_commandBuffer, m_modelDatas.at(ModelAndTransforms.first).m_vertexBufferData, CurrentBuffer, m_surfaceData, m_modelDatas.at(ModelAndTransforms.first).m_vertices.size());
+                m_renderPasses.at(RenderTarget.first).OnRenderObj(m_commandBuffer, m_modelDatas.at(ModelAndTransforms.first).m_vertexBuffer, m_modelDatas.at(ModelAndTransforms.first).m_vertices/*, m_modelDatas.at(ModelAndTransforms.first).m_vertexBufferData */ , CurrentBuffer, m_surfaceData, m_modelDatas.at(ModelAndTransforms.first).m_vertices.size());
             }
         
             m_renderPasses.at(RenderTarget.first).OnRenderFinish(CurrentBuffer, m_commandBuffer, m_device, m_swapChainData, m_graphicsQueue, m_presentQueue);
@@ -706,7 +732,9 @@ Renderer::~Renderer()
 
     for (auto& it : m_modelDatas)
     {
-        it.second.m_vertexBufferData.clear(m_device);
+        //it.second.m_vertexBufferData.clear(m_device);
+        vkDestroyBuffer(m_device, it.second.m_vertexBuffer, nullptr);
+        vkFreeMemory(m_device, it.second.m_vertexBufferMemory, nullptr);
     }
     for (auto& it : m_renderPasses)
     {
