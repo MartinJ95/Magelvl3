@@ -4,6 +4,7 @@
 class RendererSpec
 {
 public:
+	virtual void Init() = 0;
 	virtual void AddToRenderQueue(const unsigned int RenderPass, const Vector3& Pos, const unsigned int ModelID) = 0;
 	virtual void PositionCamera(const Vector3& Position, const Vector3& Rotation) = 0;
 	virtual void Render(const float DeltaTime) = 0;

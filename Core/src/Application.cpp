@@ -62,7 +62,7 @@ void Application::Update(float DeltaTime)
 		m_entCompSyst.LateUpdate();
 		double ms = (std::clock() - start) / (double)(CLOCKS_PER_SEC / 1000);
 		std::cout << "Time: " << ms << " ms" << std::endl;
-		std::cout << "FPS: " << (ms * 1000) * 60 << std::endl;
+		std::cout << "FPS: " << (1000/ms) << std::endl;
 		DTime = ms / 1000;
 	}
 }

@@ -7,7 +7,7 @@ Renderer* RendererInstance = nullptr;
 Vizualisation::Vizualisation(int Width, int Height) :
     m_width(Width), m_height(Height), m_renderer(Width, Height)
 {
-    
+    m_renderer.Init();
    
 }
 
