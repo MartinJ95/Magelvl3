@@ -9,6 +9,8 @@
 #include <limits> // Necessary for std::numeric_limits
 #include <algorithm> // Necessary for std::clamp
 
+#include "tiny_obj_loader.h"
+
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb-master/stb-master/stb_image.h>
 
@@ -132,6 +134,19 @@ void Renderer::Init()
             GenerateSphere(),
             std::vector<unsigned int>())
 
+    );
+
+    Mesh loader;
+    std::vector<Vertex> verts;
+    std::vector<unsigned int> elements{};
+    loader.LoadFromObj("IronMan.obj", verts, elements);
+    m_modelDatas.emplace(
+        std::piecewise_construct,
+        std::forward_as_tuple(2),
+        std::forward_as_tuple(m_physicalDevice,
+            m_device,
+            std::move(verts),
+            std::move(elements))
     );
     
 
@@ -1707,7 +1722,7 @@ void Renderer::CreateBuffer(const VkPhysicalDevice& PhysicalDevice, const VkDevi
 void Renderer::CreateTextureImage()
 {
     int texWidth, texHeight, texChannels;
-    stbi_uc* pixels = stbi_load("Queening.png", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+    stbi_uc* pixels = stbi_load("box.png", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
     VkDeviceSize imageSize = texWidth * texHeight * 4;
 
     if (!pixels) {
@@ -2119,3 +2134,79 @@ GuiRenderPass::GuiRenderPass(const vk::PhysicalDevice& PhysicalDevice, const vk:
 
 }
 */
+
+bool Mesh::LoadFromObj(const char* filename, std::vector<Vertex>& verts, std::vector<unsigned int>& elements)
+{
+    tinyobj::attrib_t attrib;
+
+    std::vector<tinyobj::shape_t> shapes;
+
+    std::vector<tinyobj::material_t> materials;
+
+    std::string warn;
+    std::string err;
+
+    tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filename, nullptr);
+
+    if (!warn.empty()) {
+        std::cout << "WARN: " << warn << std::endl;
+    }
+
+    if (!err.empty())
+    {
+        std::cerr << err << std::endl;
+    }
+    //loop shapes
+    for (size_t s = 0; s < shapes.size(); s++)
+    {
+        //loop faces
+        size_t index_offset = 0;
+        for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++)
+        {
+            //triangles
+            int fv = 3;
+
+            //loop face vertices
+            for (size_t v = 0; v < fv; v++)
+            {
+                if ((index_offset + v) >= shapes[s].mesh.indices.size())
+                {
+                    break;
+                }
+                //access vertex
+                tinyobj::index_t idx = shapes[s].mesh.indices[index_offset + v];
+
+                //vertex position
+                tinyobj::real_t vx = attrib.vertices[3 * idx.vertex_index + 0];
+                tinyobj::real_t vy = attrib.vertices[3 * idx.vertex_index + 1];
+                tinyobj::real_t vz = attrib.vertices[3 * idx.vertex_index + 2];
+
+                //vertex normal
+                tinyobj::real_t nx = attrib.normals[3 * idx.normal_index + 0];
+                tinyobj::real_t ny = attrib.normals[3 * idx.normal_index + 1];
+                tinyobj::real_t nz = attrib.normals[3 * idx.normal_index + 2];
+
+                //vertex texcoord
+                tinyobj::real_t tx;
+                tinyobj::real_t ty;
+                    if (idx.texcoord_index >= 0)
+                    {
+
+                tx = attrib.texcoords[2 * size_t(idx.texcoord_index) + 0];
+                ty = attrib.texcoords[2 * size_t(idx.texcoord_index) + 1];
+                }
+                    else
+                    {
+                        tx = 0;
+                        ty = 0;
+                    }
+
+                verts.emplace_back(Vertex(glm::vec4(vx, vy, vz, 1)*0.01f, glm::vec4(1, 1, 1, 1), glm::vec2(tx, ty)));
+
+                index_offset += fv;
+            }
+        }
+    }
+
+    return false;
+}

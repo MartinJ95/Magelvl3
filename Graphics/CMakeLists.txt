@@ -2,6 +2,7 @@ project(Graphics)
 
 include_directories(
         ${PROJECT_SOURCE_DIR}/include
+	${PROJECT_SOURCE_DIR}/include/tinyobjloader-release
 	${PROJECT_SOURCE_DIR}/src
 	${PROJECT_SOURCE_DIR}/Resources/include
 	${additional_includes}

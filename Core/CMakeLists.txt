@@ -6,6 +6,7 @@ cmake_path(GET cur_path PARENT_PATH parent_path)
 include_directories(
         ${PROJECT_SOURCE_DIR}/include
         ${PROJECT_SOURCE_DIR}/src
+	${parent_path}/Graphics/include/tinyobjloader-release
 	${additional_includes}
 
 )

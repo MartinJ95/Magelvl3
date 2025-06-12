@@ -28,7 +28,12 @@
 #include <stack>
 #include <fstream>
 #include <optional>
-#include <tiny_obj_loader.h>
+
+#ifndef TINYOBJLOADER_IMPLEMENTATION
+#define TINYOBJLOADER_IMPLEMENTATION
+#endif
+
+
 
 constexpr char AppNameC[] = "01_InitInstance";
 constexpr char EngineNameC[] = "Vulkan.hpp";
@@ -465,6 +470,11 @@ struct GraphicsModel
 	VkDeviceMemory m_indexBufferMemory;
 };
 
+struct Mesh
+{
+	bool LoadFromObj(const char* filename, std::vector<Vertex>& verts, std::vector<unsigned int>& elements);
+};
+
 constexpr unsigned int ModelBufferAmount = 5*5*5+10;
 
 static std::vector<char> ReadFile(const std::string& Filename)
@@ -486,6 +496,11 @@ static std::vector<char> ReadFile(const std::string& Filename)
 
 	return buffer;
 }
+
+struct GraphicsRenderPassoptions
+{
+
+};
 
 struct GraphicsRenderPass
 {
@@ -544,11 +559,10 @@ public:
 	VkPipelineLayout m_pipeLineLayout;
 	VkDescriptorPool m_descriptorPool;
 	uint32_t m_descriptorPoolSize;
-	vk::DescriptorSet m_descriptorSet;
 	VkDescriptorSet m_uniformImage;
 	VkCommandPool m_commandPool;
 	VkCommandBuffer m_commandBuffer;
-	unsigned int m_usedModelsAmount{0};\
+	unsigned int m_usedModelsAmount{0};
 	std::vector<vk::DescriptorSet> m_descriptorSets;
 	VkPipelineCache m_pipelineCache;
 	VkPipeline m_pipeline;
