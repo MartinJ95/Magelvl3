@@ -353,7 +353,7 @@ static std::vector<Vertex> GenerateBox()
 
 struct GraphicsModel
 {
-	GraphicsModel(VkPhysicalDevice& PhysicalDevice, VkDevice& Device,  std::vector<Vertex>&& Vertices, std::vector<unsigned int>&& Elements) :
+	GraphicsModel(const VkPhysicalDevice& PhysicalDevice, const VkDevice& Device,  const std::vector<Vertex>&& Vertices, const std::vector<uint16_t>&& Elements) :
 		m_vertices(Vertices), m_elements(Elements)/*, m_vertexBufferData(PhysicalDevice, Device, sizeof(Vertex)* m_vertices.size(), vk::BufferUsageFlagBits::eVertexBuffer)*/
 	{
 		VkBufferCreateInfo bufferInfo{};
@@ -420,12 +420,11 @@ struct GraphicsModel
 
 		if (vkCreateBuffer(Device, &bufferInfo, nullptr, &m_indexBuffer) != VK_SUCCESS)
 		{
-			throw std::runtime_error("failed to create vertex buffer");
+			throw std::runtime_error("failed to create index buffer");
 		}
 
 		VkMemoryRequirements memRequirements;
 		vkGetBufferMemoryRequirements(Device, m_indexBuffer, &memRequirements);
-
 		auto& findMemoryType = [&](uint32_t typeFilter, VkMemoryPropertyFlags properties) -> uint32_t {
 			VkPhysicalDeviceMemoryProperties memProperties;
 			vkGetPhysicalDeviceMemoryProperties(PhysicalDevice, &memProperties);
@@ -456,13 +455,13 @@ struct GraphicsModel
 
 		void* data;
 		vkMapMemory(Device, m_indexBufferMemory, 0, bufferInfo.size, 0, &data);
-		memcpy(data, m_vertices.data(), (size_t)bufferInfo.size);
+		memcpy(data, m_elements.data(), (size_t)bufferInfo.size);
 		vkUnmapMemory(Device, m_indexBufferMemory);
 	}
 
 	unsigned int m_renderingPassId;
 	std::vector<Vertex> m_vertices;
-	std::vector<unsigned int> m_elements;
+	std::vector<uint16_t> m_elements;
 	//vk::su::BufferData m_vertexBufferData;
 	VkBuffer m_vertexBuffer;
 	VkDeviceMemory m_vertexBufferMemory;
@@ -470,9 +469,153 @@ struct GraphicsModel
 	VkDeviceMemory m_indexBufferMemory;
 };
 
+struct TerrainSubIndices
+{
+	TerrainSubIndices() :
+		m_elements(),
+		m_indexBuffer(),
+		m_indexMemory()
+	{};
+	TerrainSubIndices(const TerrainSubIndices& Other) :
+		m_elements(Other.m_elements),
+		m_indexBuffer(Other.m_indexBuffer),
+		m_indexMemory(Other.m_indexMemory)
+	{}
+	TerrainSubIndices(TerrainSubIndices&& Other) noexcept :
+		m_elements(Other.m_elements),
+		m_indexBuffer(std::move(Other.m_indexBuffer)),
+		m_indexMemory(std::move(Other.m_indexMemory))
+	{}
+	void operator=(const TerrainSubIndices& Other)
+	{
+		m_elements = Other.m_elements;
+		m_indexBuffer = Other.m_indexBuffer;
+		m_indexMemory = Other.m_indexMemory;
+	}
+	void operator=(TerrainSubIndices&& Other) noexcept
+	{
+		m_elements = Other.m_elements;
+		m_indexBuffer = std::move(Other.m_indexBuffer);
+		m_indexMemory = std::move(Other.m_indexMemory);
+	}
+	std::vector<uint16_t> m_elements;
+	VkBuffer m_indexBuffer;
+	VkDeviceMemory m_indexMemory;
+	void InitIndices(const VkPhysicalDevice& PhysicalDevice, const VkDevice& Device)
+	{
+		VkBufferCreateInfo bufferInfo{};
+		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+		bufferInfo.size = sizeof(m_elements[0]) * m_elements.size();
+		bufferInfo.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+		if (vkCreateBuffer(Device, &bufferInfo, nullptr, &m_indexBuffer) != VK_SUCCESS)
+		{
+			throw std::runtime_error("failed to create index buffer");
+		}
+
+		VkMemoryRequirements memRequirements;
+		vkGetBufferMemoryRequirements(Device, m_indexBuffer, &memRequirements);
+		auto& findMemoryType = [&](uint32_t typeFilter, VkMemoryPropertyFlags properties) -> uint32_t {
+			VkPhysicalDeviceMemoryProperties memProperties;
+			vkGetPhysicalDeviceMemoryProperties(PhysicalDevice, &memProperties);
+
+			for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++)
+			{
+				if ((typeFilter & (1 << i)) &&
+					(memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+					return i;
+				}
+			}
+
+			throw std::runtime_error("failed to find suitable memory type");
+
+			};
+
+		VkMemoryAllocateInfo allocInfo{};
+		allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+		allocInfo.allocationSize = memRequirements.size;
+		allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+		if (vkAllocateMemory(Device, &allocInfo, nullptr, &m_indexMemory) != VK_SUCCESS)
+		{
+			throw std::runtime_error("failed to allocate vertex buffer memory!");
+		}
+
+		vkBindBufferMemory(Device, m_indexBuffer, m_indexMemory, 0);
+
+		void* data;
+		vkMapMemory(Device, m_indexMemory, 0, bufferInfo.size, 0, &data);
+		memcpy(data, m_elements.data(), (size_t)bufferInfo.size);
+		vkUnmapMemory(Device, m_indexMemory);
+	}
+};
+
+struct Terrain
+{
+	Terrain(const VkPhysicalDevice& PhysicalDevice, const VkDevice& Device, const int Size) :
+		m_sectionIndices(),
+		m_TerrainModel(
+			PhysicalDevice,
+			Device,
+			GenVertices(Size),
+			GenElements(PhysicalDevice, Device, Size)
+		),
+		m_size(Size)
+	{}
+	std::vector<TerrainSubIndices> m_sectionIndices;
+	GraphicsModel m_TerrainModel;
+	int m_size;
+	std::vector<Vertex> GenVertices(const int Size)
+	{
+		std::vector<Vertex> verts;
+		verts.reserve(Size * Size);
+
+		for (int i = 0; i < Size; i++)
+		{
+			for (int j = 0; j < Size; j++)
+			{
+				verts.emplace_back(glm::vec4(i - Size * 0.5f, -5, j - Size *0.5, 1), glm::vec4(0, 1, 0, 1), glm::vec2((i*i)%2, (j*j)%2));
+				verts.emplace_back(glm::vec4((i + 1) - Size * 0.5f, -5, j - Size*0.5, 1), glm::vec4(0, 1, 0, 1), glm::vec2(((i*i)+1)%2, (j*j)%2));
+
+				if (i == 0)
+				{
+					verts[verts.size()-2].m_position.y += ((double)rand() / (RAND_MAX));
+				}
+				else
+				{
+					verts[verts.size() - 2].m_position.y = verts[verts.size()-((Size*2)+1)].m_position.y;
+				}
+				verts.back().m_position.y += ((double)rand() / (RAND_MAX));
+			}
+		}
+
+		return verts;
+	}
+	std::vector<uint16_t> GenElements(const VkPhysicalDevice& PhysicalDevice, const VkDevice& Device, const int Size)
+	{
+		std::vector<uint16_t> elements;
+
+		m_sectionIndices.reserve(Size);
+
+		for (int i = 0; i <= Size; i++)
+		{
+			m_sectionIndices.emplace_back();
+			for (int j = 0; j < Size*2; j=j+2)
+			{
+				m_sectionIndices.back().m_elements.emplace_back(j+1 + (Size*2) * i);
+				m_sectionIndices.back().m_elements.emplace_back(j + (Size*2) * i);
+			}
+			m_sectionIndices.back().InitIndices(PhysicalDevice, Device);
+		}
+
+		return elements;
+	}
+};
+
 struct Mesh
 {
-	bool LoadFromObj(const char* filename, std::vector<Vertex>& verts, std::vector<unsigned int>& elements);
+	bool LoadFromObj(const char* filename, std::vector<Vertex>& verts, std::vector<uint16_t>& elements);
 };
 
 constexpr unsigned int ModelBufferAmount = 5*5*5+10;
@@ -497,9 +640,13 @@ static std::vector<char> ReadFile(const std::string& Filename)
 	return buffer;
 }
 
-struct GraphicsRenderPassoptions
+struct GraphicsRenderPassOptions
 {
-
+	std::string VertexShader;
+	std::string FragmentShader;
+	VkPrimitiveTopology Topology;
+	VkAttachmentLoadOp LoadOp;
+	VkAttachmentStoreOp StoreOp;
 };
 
 struct GraphicsRenderPass
@@ -522,12 +669,12 @@ struct GraphicsRenderPass
 		m_pipeline(),
 		imageAcquiredSemaphore()
 	{}
-	void Init(const VkPhysicalDevice& PhysicalDevice, const VkDevice &Device, const VkExtent2D& SwapChainExtent, const VkFormat& SwapChainImageFormat, const std::vector<VkImageView>& ImageViews, const VkSurfaceKHR& Surface);
-	void CreateRenderPass(const VkDevice& Device, const VkFormat& SwapChainImageFormat);
+	void Init(const VkPhysicalDevice& PhysicalDevice, const VkDevice &Device, const VkExtent2D& SwapChainExtent, const VkFormat& SwapChainImageFormat, const std::vector<VkImageView>& ImageViews, const VkSurfaceKHR& Surface, const GraphicsRenderPassOptions Options);
+	void CreateRenderPass(const VkDevice& Device, const VkFormat& SwapChainImageFormat, const VkAttachmentLoadOp& LoadOp, const VkAttachmentStoreOp& StoreOp);
 	void CreateDescriptorSetLayout(const VkDevice& Device);
 	void CreateDescriptorSet(const VkDevice& Device);
 	void CreateUniformBuffer(const VkPhysicalDevice& PhysicalDevice, const VkDevice& Device);
-	void CreateGraphicsPipeline(const VkDevice& Device, const VkExtent2D& SwapChainExtent);
+	void CreateGraphicsPipeline(const VkDevice& Device, const VkExtent2D& SwapChainExtent, const std::string& VertexShader, const std::string& FragmentShader, const VkPrimitiveTopology& Topology);
 	void CreateFrameBuffers(const VkDevice& Device, const std::vector<VkImageView>& ImageViews, const VkExtent2D& SwapChainExtent);
 	void CreateCommandPool(const VkPhysicalDevice& PhysicalDevice, const VkDevice& Device, const VkSurfaceKHR& Surface);
 	void CreateCommandBuffer(const VkDevice& Device);
@@ -540,7 +687,7 @@ struct GraphicsRenderPass
 	void OnRenderFinish(const vk::ResultValue<uint32_t>& CurrentBuffer, const vk::CommandBuffer& CommandBuffer, const vk::Device& Device, const vk::su::SwapChainData& SwapChainData, const vk::Queue& GraphicsQueue, const vk::Queue& PresentQueue);
 	void NewOnRenderStart(const VkDevice& Device, const uint32_t ImageIndex, const VkExtent2D& SwapChainExtent, const VkSampler& Texture, const VkImageView& ImageView);
 	void NewOnRendorObjBegin(const VkBuffer& VertexBuffer, const VkBuffer& IndexBuffer);
-	void NewOnRendorObj(const int VertAmount, const PushConstant& Uniform);
+	void NewOnRendorObj(const int VertAmount, const PushConstant& Uniform, const int IndexAmount);
 	void NewOnRenderFinish();
 	void CleanUp(const vk::Device& Device);
 	~GraphicsRenderPass();
@@ -579,6 +726,7 @@ struct GuiRenderPass
 	std::vector<VkFramebuffer> m_frameBuffers;
 };
 */
+
 
 class Renderer : public RendererSpec
 {
@@ -650,6 +798,7 @@ public:
 	VkSwapchainKHR m_swapChain;
 	std::vector<VkImage> m_swapChainImages;
 	std::vector<VkImageView> m_swapChainImageViews;
+	std::unordered_map<unsigned int, Terrain> m_terrain;
 	std::unordered_map<unsigned int, GraphicsModel> m_modelDatas;
 	/*
 	* RenderTargets
@@ -658,7 +807,7 @@ public:
 	* key = graphics model
 	* value = transform matrix
 	*/
-	std::unordered_map<unsigned int, std::unordered_map<unsigned int, std::queue<glm::mat4x4>>> m_renderingTargets;
+	std::unordered_map<unsigned int, std::unordered_map<unsigned int, std::queue<glm::mat4>>> m_renderingTargets;
 	std::unordered_map<unsigned int, GraphicsRenderPass> m_renderPasses;
 	std::unordered_map<unsigned int, VkImage> m_imageDatas;
 	std::unordered_map<unsigned int, VkDeviceMemory> m_imageMemory;
