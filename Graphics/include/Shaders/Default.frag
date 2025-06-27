@@ -3,7 +3,12 @@
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
 
-layout (binding = 0) uniform sampler2D diffuse;
+layout(binding = 0) uniform UniformBufferObject {
+	mat4 view;
+	mat4 proj;
+} ubo;
+
+layout (binding = 1) uniform sampler2D diffuse;
 
 layout (location = 0) in vec4 inPosition;
 layout (location = 1) in vec4 inColor;

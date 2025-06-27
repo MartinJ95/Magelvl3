@@ -133,10 +133,11 @@ struct SwapChainSupportDetails
 
 struct Vertex
 {
-	Vertex(glm::vec4 Position, glm::vec4 Color, glm::vec2 TexCoord) : m_position(Position), m_color(Color), m_uv(TexCoord) {}
+	Vertex(glm::vec4 Position, glm::vec4 Color, glm::vec2 TexCoord, int MaterialID = 0) : m_position(Position), m_color(Color), m_uv(TexCoord), m_materialID(MaterialID) {}
 	glm::vec4 m_position;
 	glm::vec4 m_color;
 	glm::vec2 m_uv;
+	int m_materialID;
 
 	static VkVertexInputBindingDescription getBindingDescription() {
 		VkVertexInputBindingDescription bindingDescription{};
@@ -147,9 +148,9 @@ struct Vertex
 
 		return bindingDescription;
 	}
-	static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions()
+	static std::array<VkVertexInputAttributeDescription, 4> getAttributeDescriptions()
 	{
-		std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions{};
+		std::array<VkVertexInputAttributeDescription, 4> attributeDescriptions{};
 
 		attributeDescriptions[0].binding = 0;
 		attributeDescriptions[0].location = 0;
@@ -166,6 +167,10 @@ struct Vertex
 		attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
 		attributeDescriptions[2].offset = offsetof(Vertex, m_uv);
 
+		attributeDescriptions[3].binding = 0;
+		attributeDescriptions[3].location = 3;
+		attributeDescriptions[3].format = VK_FORMAT_R32_SINT;
+		attributeDescriptions[3].offset = offsetof(Vertex, m_materialID);
 
 		return attributeDescriptions;
 	}
@@ -177,9 +182,16 @@ struct TextureData
 	VkDeviceMemory textureImageMemory;
 };
 
-struct UniformBuffer
+struct UniformBufferObject
 {
-	glm::mat4 m_Transfrom;
+	glm::mat4 m_veiwMatrix;
+	glm::mat4 m_projectionMatrix;
+};
+
+struct UniformTextureBuffer
+{
+	std::array<VkSampler, 5> m_diffuseTextures;
+	//glm::mat4 m_transform;
 };
 
 struct PushConstant
@@ -469,6 +481,19 @@ struct GraphicsModel
 	VkDeviceMemory m_indexBufferMemory;
 };
 
+/*
+* Graphics Object
+* 
+* holds multiple sub meshes when loading an obj with multiple shapes
+*/
+struct GraphicsObject
+{
+	GraphicsObject() :
+		SubModels()
+	{}
+	std::unordered_map<unsigned int, GraphicsModel> SubModels;
+};
+
 struct TerrainSubIndices
 {
 	TerrainSubIndices() :
@@ -564,6 +589,7 @@ struct Terrain
 		m_size(Size)
 	{}
 	std::vector<TerrainSubIndices> m_sectionIndices;
+	std::vector<glm::vec3> m_treePositions;
 	GraphicsModel m_TerrainModel;
 	int m_size;
 	std::vector<Vertex> GenVertices(const int Size)
@@ -589,6 +615,16 @@ struct Terrain
 				verts.back().m_position.y += ((double)rand() / (RAND_MAX));
 			}
 		}
+		
+		for (int i = 0; i < 100; i++)
+		{
+			m_treePositions.emplace_back(glm::vec3(
+				(float)(rand() % Size) - Size*0.5f,
+				-2.f,
+				(float)(rand() % Size) - Size * 0.5f));
+		}
+		
+		
 
 		return verts;
 	}
@@ -615,7 +651,7 @@ struct Terrain
 
 struct Mesh
 {
-	bool LoadFromObj(const char* filename, std::vector<Vertex>& verts, std::vector<uint16_t>& elements);
+	bool LoadFromObj(const char* filename, std::vector<std::vector<Vertex>>& verts, std::vector<std::vector<uint16_t>>& elements);
 };
 
 constexpr unsigned int ModelBufferAmount = 5*5*5+10;
@@ -647,7 +683,10 @@ struct GraphicsRenderPassOptions
 	VkPrimitiveTopology Topology;
 	VkAttachmentLoadOp LoadOp;
 	VkAttachmentStoreOp StoreOp;
+	bool IsShadowMapper;
 };
+
+constexpr int gImageBufferAmount = 6;
 
 struct GraphicsRenderPass
 {
@@ -667,25 +706,28 @@ struct GraphicsRenderPass
 		m_descriptorSets(),
 		m_pipelineCache(),
 		m_pipeline(),
-		imageAcquiredSemaphore()
+		imageAcquiredSemaphore(),
+		m_isShadowMapping(false)
 	{}
-	void Init(const VkPhysicalDevice& PhysicalDevice, const VkDevice &Device, const VkExtent2D& SwapChainExtent, const VkFormat& SwapChainImageFormat, const std::vector<VkImageView>& ImageViews, const VkSurfaceKHR& Surface, const GraphicsRenderPassOptions Options);
-	void CreateRenderPass(const VkDevice& Device, const VkFormat& SwapChainImageFormat, const VkAttachmentLoadOp& LoadOp, const VkAttachmentStoreOp& StoreOp);
+	void Init(const VkPhysicalDevice& PhysicalDevice, const VkDevice &Device, const VkExtent2D& SwapChainExtent, const VkFormat& SwapChainImageFormat, const std::vector<VkImageView>& ImageViews, const std::vector<VkImageView>& ShadowMapImageView, const VkImageView DepthImageView, const VkSurfaceKHR& Surface, const GraphicsRenderPassOptions Options);
+	void CreateRenderPass(const VkPhysicalDevice PhysicalDevice, const VkDevice& Device, const VkFormat& SwapChainImageFormat, const VkAttachmentLoadOp& LoadOp, const VkAttachmentStoreOp& StoreOp);
 	void CreateDescriptorSetLayout(const VkDevice& Device);
 	void CreateDescriptorSet(const VkDevice& Device);
 	void CreateUniformBuffer(const VkPhysicalDevice& PhysicalDevice, const VkDevice& Device);
 	void CreateGraphicsPipeline(const VkDevice& Device, const VkExtent2D& SwapChainExtent, const std::string& VertexShader, const std::string& FragmentShader, const VkPrimitiveTopology& Topology);
-	void CreateFrameBuffers(const VkDevice& Device, const std::vector<VkImageView>& ImageViews, const VkExtent2D& SwapChainExtent);
+	void CreateFrameBuffers(const VkDevice& Device, const std::vector<VkImageView>& ImageViews, const std::vector<VkImageView>& ShadowMapImageView, const VkImageView DepthImageView, const VkExtent2D& SwapChainExtent);
 	void CreateCommandPool(const VkPhysicalDevice& PhysicalDevice, const VkDevice& Device, const VkSurfaceKHR& Surface);
 	void CreateCommandBuffer(const VkDevice& Device);
 	void RecordCommandBuffer(const uint32_t ImageIndex, const VkExtent2D& SwapChainExtent);
 	VkShaderModule CreateShaderModule(const VkDevice& Device, const std::vector<char>& Code);
 	glm::mat4 GetViewProjectionMatrix(const VkExtent2D& SurfaceExtent, const glm::mat4& CamMatrix);
+	glm::mat4 GetProjectionMatrix(const VkExtent2D& SurfaceExtent);
+	glm::mat4 GetViewMatrix(const glm::mat4& CamMatrix);
 	void SetUniformDataModelViewProjection(const glm::mat4& projectionViewMatrix,const vk::su::SurfaceData& SurfaceData, const vk::PhysicalDevice& PhysicalDevice, const vk::Device& Device, const glm::mat4x4& ModelMatrix, const glm::mat4x4& CamMatrix, const bool ShouldUpdate);
 	void OnRenderStart(const vk::Device& Device, vk::su::SwapChainData& SwapChainData, vk::CommandBuffer& CommandBuffer, vk::su::SurfaceData& SurfaceData);
 	void OnRenderObj(const vk::CommandBuffer& CommandBuffer, const VkBuffer& VertexBuffer, const std::vector<Vertex> VertData, const vk::ResultValue<uint32_t>& ResultValue, const vk::su::SurfaceData& SurfaceData, const int VertexCount);
 	void OnRenderFinish(const vk::ResultValue<uint32_t>& CurrentBuffer, const vk::CommandBuffer& CommandBuffer, const vk::Device& Device, const vk::su::SwapChainData& SwapChainData, const vk::Queue& GraphicsQueue, const vk::Queue& PresentQueue);
-	void NewOnRenderStart(const VkDevice& Device, const uint32_t ImageIndex, const VkExtent2D& SwapChainExtent, const VkSampler& Texture, const VkImageView& ImageView);
+	void NewOnRenderStart(const VkDevice& Device, const uint32_t ImageIndex, const VkExtent2D& SwapChainExtent, const UniformBufferObject BufferObject, const std::array<VkSampler, gImageBufferAmount>& Textures, const std::array<VkImageView, gImageBufferAmount>& ImageViews);
 	void NewOnRendorObjBegin(const VkBuffer& VertexBuffer, const VkBuffer& IndexBuffer);
 	void NewOnRendorObj(const int VertAmount, const PushConstant& Uniform, const int IndexAmount);
 	void NewOnRenderFinish();
@@ -706,7 +748,7 @@ public:
 	VkPipelineLayout m_pipeLineLayout;
 	VkDescriptorPool m_descriptorPool;
 	uint32_t m_descriptorPoolSize;
-	VkDescriptorSet m_uniformImage;
+	VkDescriptorSet m_uniformDescriptorSet;
 	VkCommandPool m_commandPool;
 	VkCommandBuffer m_commandBuffer;
 	unsigned int m_usedModelsAmount{0};
@@ -714,6 +756,7 @@ public:
 	VkPipelineCache m_pipelineCache;
 	VkPipeline m_pipeline;
 	vk::Semaphore imageAcquiredSemaphore;
+	bool m_isShadowMapping;
 };
 /*
 struct GuiRenderPass
@@ -727,6 +770,23 @@ struct GuiRenderPass
 };
 */
 
+/*
+* Sub Queue for render targets
+* contains mapped sub objects and the corresponding transforms where drawn
+* note that we treat unsigned int as a bit array so allow graphics objects to have 32 sub shapes max
+*/
+struct RenderObjectSubQueue
+{
+	std::unordered_map<unsigned int, std::queue<glm::mat4>> m_subQueue;
+};
+/*
+* SubQueue
+* 
+*/
+struct RenderObjectQueue
+{
+	std::unordered_map<unsigned int, RenderObjectSubQueue> m_mainObjectRenderQueue;
+};
 
 class Renderer : public RendererSpec
 {
@@ -734,10 +794,12 @@ public:
 	Renderer(int Width, int Height);
 	void Init() override final;
 	void CreateSyncObjects();
+	void CreateSingleUseCommandPoolAndBuffer();
 	void CreateLogicalDevice();
 	void CreateSwapChain();
 	void CreateSurface();
 	void CreateImageViews();
+	void CreateShadowMapImageViews();
 	void CreateGraphicsPipeline();
 	static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
 		VkDebugUtilsMessageSeverityFlagBitsEXT MessageSeverity,
@@ -760,6 +822,7 @@ public:
 	static QueueFamilyIndices FindQueueFamilies(const VkPhysicalDevice& Device, const VkSurfaceKHR& Surface);
 	void PickPhysicalDevice();
 	void AddToRenderQueue(const unsigned int RenderPass, const Vector3& Pos, const unsigned int ModelID) override final;
+	glm::mat4 BuildMatrix(const Vector3& Position, const Vector3& Rotation);
 	void PositionCamera(const Vector3& Position, const Vector3& Rotation) override final;
 	void Render(const float DeltaTime) override final;
 	bool WindowShouldClose() const override final;
@@ -767,6 +830,10 @@ public:
 	void OnGUI();
 	static uint32_t FindMemoryType(const VkPhysicalDevice& PhysicalDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties);
 	static void CreateBuffer(const VkPhysicalDevice& PhysicalDevice, const VkDevice& Device, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
+	bool HasStencilComponent(VkFormat Format);
+	static VkFormat FindSupportedFormat(const VkPhysicalDevice PhysicalDevice, const std::vector<VkFormat>& Candidates, VkImageTiling Tiling, VkFormatFeatureFlags Features);
+	static VkFormat FindDepthFormat(const VkPhysicalDevice PhysicalDevice);
+	void CreateDepthResources();
 	void CreateTextureImage();
 	void CreateImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
 	VkCommandBuffer BeginSingleTimeCommands();
@@ -775,7 +842,7 @@ public:
 	void TransitionImageLayout(VkImage Image, VkFormat Format, VkImageLayout OldLayout, VkImageLayout NewLayout);
 	void CopyBufferToImage(VkBuffer Buffer, VkImage Image, uint32_t Width, uint32_t Height);
 	void CreateTextureImageView();
-	VkImageView CreateImageView(VkImage Image, VkFormat Format);
+	VkImageView CreateImageView(VkImage Image, VkFormat Format, VkImageAspectFlags AspectFlags);
 	void CreateTextureSampler();
 	void CreateInstance();
 	~Renderer();
@@ -798,8 +865,16 @@ public:
 	VkSwapchainKHR m_swapChain;
 	std::vector<VkImage> m_swapChainImages;
 	std::vector<VkImageView> m_swapChainImageViews;
+
+	std::vector<VkImage> m_shadowMapImages;
+	std::vector<VkDeviceMemory> m_shadowMapImagesMemory;
+	std::vector<VkImageView> m_shadowMapImageViews;
+
+	VkImage depthImage;
+	VkDeviceMemory depthImageMemory;
+	VkImageView depthImageView;
 	std::unordered_map<unsigned int, Terrain> m_terrain;
-	std::unordered_map<unsigned int, GraphicsModel> m_modelDatas;
+	std::unordered_map<unsigned int, GraphicsObject> m_modelDatas;
 	/*
 	* RenderTargets
 	* Key = render pass
@@ -807,12 +882,12 @@ public:
 	* key = graphics model
 	* value = transform matrix
 	*/
-	std::unordered_map<unsigned int, std::unordered_map<unsigned int, std::queue<glm::mat4>>> m_renderingTargets;
+	std::unordered_map<unsigned int, RenderObjectQueue> m_renderingTargets;
 	std::unordered_map<unsigned int, GraphicsRenderPass> m_renderPasses;
 	std::unordered_map<unsigned int, VkImage> m_imageDatas;
 	std::unordered_map<unsigned int, VkDeviceMemory> m_imageMemory;
-	VkImageView m_imageVeiw;
-	VkSampler m_sampler;
+	std::array<VkImageView, gImageBufferAmount> m_imageVeiws;
+	std::array<VkSampler, gImageBufferAmount> m_samplers;
 	//GuiRenderPass m_guiPass;
 	glm::mat4x4 m_camMatrix = glm::mat4x4(1);
 	ImGui_ImplVulkanH_Window mainWindowData;
@@ -820,5 +895,6 @@ public:
 	VkSemaphore m_renderFinishedSemaphore;
 	VkFence m_inFlightFence;
 	std::pair<float, float> m_upDateDescriptorTimer{ 0, 1.f };
+	glm::vec3 m_directionalLightDirection{ 1, -0.5, 0 };
 	bool m_shouldUpdateDescriptor{ true };
 };

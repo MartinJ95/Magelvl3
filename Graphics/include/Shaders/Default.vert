@@ -3,11 +3,17 @@
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
 
+layout(binding = 0) uniform UniformBufferObject {
+	mat4 view;
+	mat4 proj;
+} ubo;
+
 layout(push_constant) uniform Push {
 	mat4 mvp;
+	bool usesTexture;
 } push;
 
-layout(binding = 0) uniform sampler2D diffuse;
+layout(binding = 1) uniform sampler2D diffuse;
 
 layout(location = 0) in vec4 pos;
 layout(location = 1) in vec4 inColor;
@@ -19,7 +25,8 @@ layout(location = 2) out vec2 outTexCoord;
 
 void main()
 {
-	outPos = push.mvp * vec4(pos.xyz, 1.0f);
+	outPos = ubo.proj * ubo.view * push.mvp * vec4(pos.xyz, 1.0f);
+	//outPos = push.mvp * vec4(pos.xyz, 1.0f);
 	outColor = inColor;
 	outTexCoord = InTexCoord;
 	gl_Position = outPos;
