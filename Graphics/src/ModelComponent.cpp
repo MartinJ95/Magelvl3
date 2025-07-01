@@ -14,6 +14,7 @@ void ModelComponent::BeginPlay()
 void ModelComponent::Update(float DeltaTime)
 {
 	Renderer& renderer = GetRenderer();
+	renderer.AddToRenderQueue(1, GetEcsInstance().FindComponent<Transform>(m_entityID).GetPosition(), m_modelID);
 	renderer.AddToRenderQueue(3, GetEcsInstance().FindComponent<Transform>(m_entityID).GetPosition(), m_modelID);
 	//renderer.AddToRenderQueue(0, m_position);
 }

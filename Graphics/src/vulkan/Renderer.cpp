@@ -101,6 +101,9 @@ void Renderer::Init()
 
     m_window = glfwCreateWindow(m_width, m_height, "Vulkan", nullptr, nullptr);
 
+    m_extents.width = m_width;
+    m_extents.height = m_height;
+
     CreateInstance();
     SetupDebugMessenger();
     CreateSurface();
@@ -112,6 +115,7 @@ void Renderer::Init()
     CreateSingleUseCommandPoolAndBuffer();
 
     CreateShadowMapImageViews();
+
     CreateTextureImage();
     CreateTextureImageView();
     CreateTextureSampler();
@@ -136,29 +140,31 @@ void Renderer::Init()
     }
 
     //terrain shadow pass
-    m_renderPasses[0].Init(m_physicalDevice, m_device, m_swapChainExtent, m_swapChainImageFormat, m_swapChainImageViews, m_shadowMapImageViews, depthImageView, m_surface, options);
+    m_renderPasses[0].Init(m_physicalDevice, m_device, m_swapChainExtent, m_swapChainImageFormat, m_swapChainImageViews, m_shadowMapImageViews, m_shadowMapDepthImageView, depthImageView, m_surface, options);
 
 
     options.Topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     options.LoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
 
     //normal pass shadow
-    m_renderPasses[1].Init(m_physicalDevice, m_device, m_swapChainExtent, m_swapChainImageFormat, m_swapChainImageViews, m_shadowMapImageViews, depthImageView, m_surface, options);
+    m_renderPasses[1].Init(m_physicalDevice, m_device, m_swapChainExtent, m_swapChainImageFormat, m_swapChainImageViews, m_shadowMapImageViews, m_shadowMapDepthImageView, depthImageView, m_surface, options);
     
     options.Topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
     options.LoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     options.IsShadowMapper = false;
 
     //terrain normal pass
-    m_renderPasses[2].Init(m_physicalDevice, m_device, m_swapChainExtent, m_swapChainImageFormat, m_swapChainImageViews, m_shadowMapImageViews, depthImageView, m_surface, options);
+    m_renderPasses[2].Init(m_physicalDevice, m_device, m_swapChainExtent, m_swapChainImageFormat, m_swapChainImageViews, m_shadowMapImageViews, m_shadowMapDepthImageView, depthImageView, m_surface, options);
 
     options.Topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     options.LoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
 
     //normal pass non shadow
-    m_renderPasses[3].Init(m_physicalDevice, m_device, m_swapChainExtent, m_swapChainImageFormat, m_swapChainImageViews, m_shadowMapImageViews, depthImageView, m_surface, options);
+    m_renderPasses[3].Init(m_physicalDevice, m_device, m_swapChainExtent, m_swapChainImageFormat, m_swapChainImageViews, m_shadowMapImageViews, m_shadowMapDepthImageView, depthImageView, m_surface, options);
 
     //m_terrain.reserve(3);
+
+    PositionLight(Vector3(0, 60, 0), Vector3(55, 0, 0));
     
     for (int i = 0; i < m_renderPasses.size(); i++)
     {
@@ -501,6 +507,68 @@ void Renderer::CreateShadowMapImageViews()
 {
     m_shadowMapImages.resize(m_shadowMapImageViews.size());
     m_shadowMapImagesMemory.resize(m_shadowMapImageViews.size());
+
+    // make images
+    //int texWidth, texHeight, texChannels;
+
+    
+    /*
+    stbi_uc* pixels = stbi_load("grass.png", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+    VkDeviceSize imageSize = texWidth * texHeight * 4;
+
+    if (!pixels) {
+        throw std::runtime_error("failed to load texture image!");
+    }
+
+    VkBuffer stagingBuffer;
+    VkDeviceMemory stagingBufferMemory;
+    CreateBuffer(m_physicalDevice, m_device, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+
+    void* data;
+    vkMapMemory(m_device, stagingBufferMemory, 0, imageSize, 0, &data);
+    memcpy(data, pixels, static_cast<size_t>(imageSize));
+    vkUnmapMemory(m_device, stagingBufferMemory);
+
+    stbi_image_free(pixels);
+    */
+
+    for (int i = 0; i < m_shadowMapImages.size(); i++)
+    {
+        CreateImage(m_extents.width, m_extents.height, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_shadowMapImages[i], m_shadowMapImagesMemory[i]);
+
+        //TransitionImageLayout(m_shadowMapImages[i], VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+        //CopyBufferToImage(stagingBuffer, m_shadowMapImages[i], static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
+        //TransitionImageLayout(m_shadowMapImages[i], VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    }
+
+    //m_imageDatas.emplace(0, nullptr);
+    //m_imageMemory.emplace(0, nullptr);
+
+    
+
+    //vkDestroyBuffer(m_device, stagingBuffer, nullptr);
+    //vkFreeMemory(m_device, stagingBufferMemory, nullptr);
+
+    //finish images
+
+    //make image views
+
+    for (int i = 0; i < m_shadowMapImages.size(); i++)
+    {
+        m_shadowMapImageViews[i] = CreateImageView(m_shadowMapImages[i], VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
+    }
+
+    //finish image views
+
+    //make sampler
+
+    VkFormat depthFormat = FindDepthFormat(m_physicalDevice);
+
+    CreateImage(m_swapChainExtent.width, m_swapChainExtent.height, depthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_shadowMapDepthImage, m_shadowMapDepthMemory);
+
+    m_shadowMapDepthImageView = CreateImageView(m_shadowMapDepthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
+
+    TransitionImageLayout(m_shadowMapDepthImage, depthFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 }
 
 void Renderer::CreateGraphicsPipeline()
@@ -875,20 +943,25 @@ void Renderer::PositionCamera(const Vector3& Position, const Vector3& Rotation)
     
 }
 
-void GraphicsRenderPass::Init(const VkPhysicalDevice& PhysicalDevice, const VkDevice& Device, const VkExtent2D& SwapChainExtent, const VkFormat& SwapChainImageFormat, const std::vector<VkImageView>& ImageViews, const std::vector<VkImageView>& ShadowMapImageView, const VkImageView DepthImageView, const VkSurfaceKHR& Surface, const GraphicsRenderPassOptions Options)
+void Renderer::PositionLight(const Vector3& Position, const Vector3& Rotation)
 {
+    m_lightMatrix = BuildMatrix(Position, Rotation);
+}
+
+void GraphicsRenderPass::Init(const VkPhysicalDevice& PhysicalDevice, const VkDevice& Device, const VkExtent2D& SwapChainExtent, const VkFormat& SwapChainImageFormat, const std::vector<VkImageView>& ImageViews, const std::vector<VkImageView>& ShadowMapImageView, const VkImageView& ShadowDepthImageView, const VkImageView DepthImageView, const VkSurfaceKHR& Surface, const GraphicsRenderPassOptions Options)
+{
+    if (Options.IsShadowMapper)
+    {
+        m_isShadowMapping = true;
+    }
+
     CreateRenderPass(PhysicalDevice, Device, SwapChainImageFormat, Options.LoadOp, Options.StoreOp);
     CreateDescriptorSetLayout(Device);
     CreateDescriptorSet(Device);
     CreateUniformBuffer(PhysicalDevice, Device);
     CreateGraphicsPipeline(Device, SwapChainExtent, Options.VertexShader, Options.FragmentShader, Options.Topology);
 
-    if (Options.IsShadowMapper)
-    {
-        m_isShadowMapping = true;
-    }
-
-    CreateFrameBuffers(Device, ImageViews, ShadowMapImageView, DepthImageView, SwapChainExtent);
+    CreateFrameBuffers(Device, ImageViews, ShadowMapImageView, ShadowDepthImageView, DepthImageView, SwapChainExtent);
     CreateCommandPool(PhysicalDevice, Device, Surface);
     CreateCommandBuffer(Device);
 }
@@ -962,7 +1035,11 @@ void GraphicsRenderPass::CreateRenderPass(const VkPhysicalDevice PhysicalDevice,
 
 void GraphicsRenderPass::CreateDescriptorSetLayout(const VkDevice& Device)
 {
-    std::array<VkDescriptorSetLayoutBinding, 2> uboBindings{};
+    /*
+    if (m_isShadowMapping)
+        return;
+    */
+    std::array<VkDescriptorSetLayoutBinding, 3> uboBindings{};
 
     uboBindings[0].binding = 0;
     uboBindings[0].descriptorCount = 1;
@@ -971,11 +1048,19 @@ void GraphicsRenderPass::CreateDescriptorSetLayout(const VkDevice& Device)
 
     uboBindings[1].binding = 1;
     uboBindings[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    uboBindings[1].descriptorCount = 5;
+    uboBindings[1].descriptorCount = gImageBufferAmount;
+
 
     uboBindings[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
     uboBindings[1].pImmutableSamplers = nullptr; // Optional
+
+    uboBindings[2].binding = 2;
+    uboBindings[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    uboBindings[2].descriptorCount = 1;
+    uboBindings[2].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+    uboBindings[2].pImmutableSamplers = nullptr; // Optional
 
     /*
     VkDescriptorSetLayoutBinding uboLayoutBinding{};
@@ -990,7 +1075,7 @@ void GraphicsRenderPass::CreateDescriptorSetLayout(const VkDevice& Device)
 
     VkDescriptorSetLayoutCreateInfo layoutInfo{};
     layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    layoutInfo.bindingCount = 2;
+    layoutInfo.bindingCount = 3;
     layoutInfo.pBindings = uboBindings.data();
 
     if (vkCreateDescriptorSetLayout(Device, &layoutInfo, nullptr, &m_descriptorSetLayout) != VK_SUCCESS) {
@@ -1000,14 +1085,30 @@ void GraphicsRenderPass::CreateDescriptorSetLayout(const VkDevice& Device)
 
 }
 
+void GraphicsRenderPass::CreateComputeDescriptorSetLayout(const VkDevice& Device)
+{
+    /*
+    if (!m_isShadowMapping)
+        return;
+    */
+}
+
 void GraphicsRenderPass::CreateDescriptorSet(const VkDevice& Device)
 {
-    VkDescriptorPoolSize type_count[2];
+    /*
+    if (m_isShadowMapping)
+        return;
+    */
+
+    VkDescriptorPoolSize type_count[3];
     type_count[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     type_count[0].descriptorCount = 1;
 
     type_count[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     type_count[1].descriptorCount = gImageBufferAmount;
+
+    type_count[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    type_count[2].descriptorCount = 1;
 
     VkDescriptorPoolCreateInfo descriptor_pool{};
     descriptor_pool.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -1030,6 +1131,14 @@ void GraphicsRenderPass::CreateDescriptorSet(const VkDevice& Device)
     {
         throw std::runtime_error("failed to create descriptor set");
     }
+}
+
+void GraphicsRenderPass::CreateComputeDescriptorSet(const VkDevice& Device)
+{
+    /*
+    if (!m_isShadowMapping)
+        return;
+    */
 }
 
 void GraphicsRenderPass::CreateUniformBuffer(const VkPhysicalDevice& PhysicalDevice, const VkDevice& Device)
@@ -1224,7 +1333,7 @@ void GraphicsRenderPass::CreateGraphicsPipeline(const VkDevice& Device, const Vk
     vkDestroyShaderModule(Device, m_fragmentShaderModule, nullptr);
 }
 
-void GraphicsRenderPass::CreateFrameBuffers(const VkDevice& Device, const std::vector<VkImageView>& ImageViews, const std::vector<VkImageView>& ShadowMapImageView, const VkImageView DepthImageView, const VkExtent2D& SwapChainExtent)
+void GraphicsRenderPass::CreateFrameBuffers(const VkDevice& Device, const std::vector<VkImageView>& ImageViews, const std::vector<VkImageView>& ShadowMapImageView, const VkImageView& ShadowDepthImageView, const VkImageView DepthImageView, const VkExtent2D& SwapChainExtent)
 {
     m_frameBuffers.resize(ImageViews.size());
 
@@ -1244,6 +1353,7 @@ void GraphicsRenderPass::CreateFrameBuffers(const VkDevice& Device, const std::v
         if (m_isShadowMapping)
         {
             attachments[0] = ShadowMapImageView[i];
+            attachments[1] = ShadowDepthImageView;
         }
 
         VkFramebufferCreateInfo framebufferInfo{};
@@ -1309,8 +1419,13 @@ void GraphicsRenderPass::RecordCommandBuffer(const uint32_t ImageIndex, const Vk
 
     std::array<VkClearValue, 2> clearValues{};
 
-    clearValues[0].color = {{0.1f, 0.1f, 0.1f, 0.1f}};
+    clearValues[0].color = {{0.1f, 0.1f, 0.1f, 1.f}};
     clearValues[1].depthStencil = { 1.f, 0 };
+
+    if (m_isShadowMapping)
+    {
+        clearValues[0].color = { {1,1,1,1} };
+    }
 
     ////renderPassInfo.clearValueCount = 1;
     renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
@@ -1401,7 +1516,7 @@ glm::mat4 GraphicsRenderPass::GetProjectionMatrix(const VkExtent2D& SurfaceExten
 
     float fov = 45.f;
 
-    std::pair<float, float> nearFarPlanes{ 0.1f, 100.f };
+    std::pair<float, float> nearFarPlanes{ gNearPlane, gFarPlane};
 
     glm::mat4 projectionMatrix = glm::perspective(fov, aspectRatio, nearFarPlanes.first, nearFarPlanes.second);
 
@@ -1410,6 +1525,7 @@ glm::mat4 GraphicsRenderPass::GetProjectionMatrix(const VkExtent2D& SurfaceExten
 
 glm::mat4 GraphicsRenderPass::GetViewMatrix(const glm::mat4& CamMatrix)
 {
+
     glm::mat4 viewMatrix = glm::inverse(CamMatrix);
 
     glm::mat4x4 xMatrix = glm::inverse(
@@ -1569,7 +1685,7 @@ void GraphicsRenderPass::OnRenderFinish(const vk::ResultValue<uint32_t> &Current
  */
 }
 
-void GraphicsRenderPass::NewOnRenderStart(const VkDevice& Device, const uint32_t ImageIndex, const VkExtent2D& SwapChainExtent, const UniformBufferObject UniformBuffer, const std::array<VkSampler, gImageBufferAmount>& Textures, const std::array<VkImageView, gImageBufferAmount>& ImageViews)
+void GraphicsRenderPass::NewOnRenderStart(const VkDevice& Device, const uint32_t ImageIndex, const VkExtent2D& SwapChainExtent, const UniformBufferObject UniformBuffer, const std::array<VkSampler, gImageBufferAmount>& Textures, const std::array<VkImageView, gImageBufferAmount>& ImageViews, const VkImageView& ShadowMapImageView)
 {
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -1590,8 +1706,13 @@ void GraphicsRenderPass::NewOnRenderStart(const VkDevice& Device, const uint32_t
 
     std::array<VkClearValue, 2> clearValues{};
 
-    clearValues[0].color = { {0.1f, 0.1f, 0.1f, 0.1f} };
+    clearValues[0].color = { {0.1f, 0.1f, 0.1f, 1.f} };
     clearValues[1].depthStencil = { 1.f, 0 };
+
+    if (m_isShadowMapping)
+    {
+        clearValues[0].color = { {1,1,1,1} };
+    }
 
     ////renderPassInfo.clearValueCount = 1;
     renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
@@ -1622,7 +1743,7 @@ void GraphicsRenderPass::NewOnRenderStart(const VkDevice& Device, const uint32_t
     bufferInfo.offset = 0;
     bufferInfo.range = sizeof(UniformBufferObject);
 
-    std::array<VkWriteDescriptorSet, 2> writeInfos{};
+    std::array<VkWriteDescriptorSet, 3> writeInfos{};
     writeInfos[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     writeInfos[0].descriptorCount = 1;
     writeInfos[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -1640,7 +1761,21 @@ void GraphicsRenderPass::NewOnRenderStart(const VkDevice& Device, const uint32_t
     writeInfos[1].dstSet = m_uniformDescriptorSet;
     writeInfos[1].pImageInfo = imageInfos.data();
 
-    vkUpdateDescriptorSets(Device, 2, writeInfos.data(), 0, nullptr);
+    VkDescriptorImageInfo shadowMapInfo;
+
+    shadowMapInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    shadowMapInfo.sampler = Textures[0];
+    shadowMapInfo.imageView = ShadowMapImageView;
+
+    writeInfos[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    writeInfos[2].descriptorCount = 1;
+    writeInfos[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    writeInfos[2].dstBinding = 2;
+    writeInfos[2].dstSet = m_uniformDescriptorSet;
+    writeInfos[2].pImageInfo = &shadowMapInfo;
+
+
+    vkUpdateDescriptorSets(Device, 3, writeInfos.data(), 0, nullptr);
 
     vkCmdBindDescriptorSets(m_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayout, 0, 1, &m_uniformDescriptorSet, 0, nullptr);
 
@@ -1719,6 +1854,8 @@ void Renderer::Render(const float DeltaTime)
         m_shouldUpdateDescriptor = true;
     }
 
+    //m_camMatrix = m_lightMatrix;
+
     //bring back
     OnGUI();
 
@@ -1742,43 +1879,55 @@ void Renderer::Render(const float DeltaTime)
     UniformBufferObject uniform{};
     uniform.m_projectionMatrix = m_renderPasses[0].GetProjectionMatrix(m_extents);
     uniform.m_veiwMatrix = m_renderPasses[0].GetViewMatrix(m_camMatrix);
-
-    m_renderPasses[2].NewOnRenderStart(m_device, imageIndex, m_swapChainExtent, uniform, m_samplers, m_imageVeiws);
-
+    uniform.m_lightViewMatrix = m_renderPasses[0].GetViewMatrix(m_lightMatrix);
+    
+    
+    //shadow map terrain
+    m_renderPasses[0].NewOnRenderStart(m_device, imageIndex, m_swapChainExtent, uniform, m_samplers, m_imageVeiws, m_shadowMapDepthImageView);
+    
     for (int i = 0; i < m_terrain.at(0).m_size; i++)
     {
-        
+
         m_renderPasses[0].NewOnRendorObjBegin(m_terrain.at(0).m_TerrainModel.m_vertexBuffer, m_terrain.at(0).m_sectionIndices[i].m_indexBuffer);
 
         glm::mat4 ViewProjection = m_renderPasses.at(0).GetViewProjectionMatrix(m_extents, m_camMatrix);
 
         PushConstant push{};
-        push.m_transform = /*ViewProjection * */
+        push.m_transform = 
             glm::mat4(
                 1, 0, 0, 0,
                 0, 1, 0, 0,
                 0, 0, 1, 0,
                 0, 0, 0, 1);
+        push.m_usesTexture = true;
+        push.m_shadowMapping = m_renderPasses[0].m_isShadowMapping;
 
-        m_renderPasses[2].NewOnRendorObj(m_terrain.at(0).m_TerrainModel.m_vertices.size(), push, m_terrain.at(0).m_sectionIndices[i].m_elements.size());
+        m_renderPasses[0].NewOnRendorObj(m_terrain.at(0).m_TerrainModel.m_vertices.size(), push, m_terrain.at(0).m_sectionIndices[i].m_elements.size());
 
     }
-    m_renderPasses[2].NewOnRenderFinish();
+    
+    m_renderPasses[0].NewOnRenderFinish();
+    
+    
+    
+   
+    
 
     
     //iterate render passes
     for (auto& RenderPass : m_renderingTargets)
     {
-        if (RenderPass.second.m_mainObjectRenderQueue.empty())
+        if (RenderPass.second.m_mainObjectRenderQueue.empty() && RenderPass.first != 2)
             continue;
 
         UniformBufferObject uniform1{};
         uniform1.m_projectionMatrix = m_renderPasses[RenderPass.first].GetProjectionMatrix(m_extents);
         uniform1.m_veiwMatrix = m_renderPasses[RenderPass.first].GetViewMatrix(m_camMatrix);
+        uniform1.m_lightViewMatrix = m_renderPasses[RenderPass.first].GetViewMatrix(m_lightMatrix);
 
-        m_renderPasses[RenderPass.first].NewOnRenderStart(m_device, imageIndex, m_swapChainExtent, uniform1, m_samplers, m_imageVeiws);
+        m_renderPasses[RenderPass.first].NewOnRenderStart(m_device, imageIndex, m_swapChainExtent, uniform1, m_samplers, m_imageVeiws, m_shadowMapDepthImageView);
 
-        glm::mat4 ViewProjection = m_renderPasses.at(RenderPass.first).GetViewProjectionMatrix(m_extents, m_camMatrix);
+        //glm::mat4 ViewProjection = m_renderPasses.at(RenderPass.first).GetViewProjectionMatrix(m_extents, m_camMatrix);
 
         // iterate render models
         for (auto& RenderSelection : RenderPass.second.m_mainObjectRenderQueue)
@@ -1795,33 +1944,48 @@ void Renderer::Render(const float DeltaTime)
                 {
                     //check if is valid selection
                     if ((RenderSubSelection.first & i) == 0)
+                    {
+                        subModel++;
                         continue;
+                    }
 
                     //check if model exists
-                    if (m_modelDatas.at(RenderSelection.first).SubModels.find(subModel) == m_modelDatas.at(RenderSelection.first).SubModels.end())
+                    if (m_modelDatas.at(RenderSelection.first).SubModels.find(subModel-1) == m_modelDatas.at(RenderSelection.first).SubModels.end())
                         continue;
                     
-                    m_renderPasses.at(RenderPass.first).NewOnRendorObjBegin(m_modelDatas.at(RenderSelection.first).SubModels.at(subModel).m_vertexBuffer, m_modelDatas.at(RenderSelection.first).SubModels.at(subModel).m_indexBuffer);
+                    m_renderPasses.at(RenderPass.first).NewOnRendorObjBegin(m_modelDatas.at(RenderSelection.first).SubModels.at(subModel-1).m_vertexBuffer, m_modelDatas.at(RenderSelection.first).SubModels.at(subModel-1).m_indexBuffer);
 
                     //iterate positions
                     while (!RenderSubSelection.second.empty())
                     {
                         PushConstant push{};
-                        push.m_transform = ViewProjection * RenderSubSelection.second.front();
+                        push.m_transform = RenderSubSelection.second.front();
+                        push.m_usesTexture = true;
+                        push.m_shadowMapping = m_renderPasses[RenderPass.first].m_isShadowMapping;
+
                         m_renderPasses.at(RenderPass.first).NewOnRendorObj(
-                            m_modelDatas.at(RenderSelection.first).SubModels.at(RenderSubSelection.first).m_vertices.size(),
+                            m_modelDatas.at(RenderSelection.first).SubModels.at(subModel-1).m_vertices.size(),
                             push,
-                            m_modelDatas.at(RenderSelection.first).SubModels.at(RenderSubSelection.first).m_elements.size());
+                            m_modelDatas.at(RenderSelection.first).SubModels.at(subModel-1).m_elements.size());
                         RenderSubSelection.second.pop();
                     }
                     subModel++;
                 }
             }
         }
-        if (RenderPass.first == 1)
+        //draw trees
+        if (RenderPass.first == 3 || RenderPass.first == 1)
         {
             for (int i = 0; i < m_terrain.at(0).m_treePositions.size(); i++)
             {
+                
+                glm::vec3 LtoT = m_terrain.at(0).m_treePositions.at(i) - glm::vec3(0, 20, 0);
+
+                if (glm::dot(glm::normalize(LtoT), glm::vec3(0, 0, 1)) < 0.75)
+                {
+                    continue;
+                }
+
                 m_renderPasses[RenderPass.first].NewOnRendorObjBegin(m_modelDatas.at(3).SubModels.at(0).m_vertexBuffer, m_modelDatas.at(3).SubModels.at(0).m_indexBuffer);
                 PushConstant push{};
                 glm::mat4 model = glm::mat4(
@@ -1832,9 +1996,41 @@ void Renderer::Render(const float DeltaTime)
                 model = glm::translate(model, m_terrain.at(0).m_treePositions[i]);
                 //push.m_transform = ViewProjection * model;
                 push.m_transform = model;
+                push.m_usesTexture = true;
+                push.m_shadowMapping = m_renderPasses[RenderPass.first].m_isShadowMapping;
                 m_renderPasses[RenderPass.first].NewOnRendorObj(m_modelDatas.at(3).SubModels.at(0).m_vertices.size(), push, m_modelDatas.at(3).SubModels.at(0).m_elements.size());
             }
-            ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), m_renderPasses.at(1).m_commandBuffer);
+            if (RenderPass.first == 3)
+            {
+                ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), m_renderPasses.at(3).m_commandBuffer);
+            }
+        }
+        else if (RenderPass.first == 2)
+        {
+            //normal render terrain
+            //m_renderPasses[2].NewOnRenderStart(m_device, imageIndex, m_swapChainExtent, uniform, m_samplers, m_imageVeiws, m_shadowMapImageViews.at(imageIndex));
+
+            for (int i = 0; i < m_terrain.at(0).m_size; i++)
+            {
+
+                m_renderPasses[2].NewOnRendorObjBegin(m_terrain.at(0).m_TerrainModel.m_vertexBuffer, m_terrain.at(0).m_sectionIndices[i].m_indexBuffer);
+
+                glm::mat4 ViewProjection = m_renderPasses.at(2).GetViewProjectionMatrix(m_extents, m_camMatrix);
+
+                PushConstant push{};
+                push.m_transform =
+                    glm::mat4(
+                        1, 0, 0, 0,
+                        0, 1, 0, 0,
+                        0, 0, 1, 0,
+                        0, 0, 0, 1);
+                push.m_usesTexture = true;
+                push.m_shadowMapping = m_renderPasses[2].m_isShadowMapping;
+
+                m_renderPasses[2].NewOnRendorObj(m_terrain.at(0).m_TerrainModel.m_vertices.size(), push, m_terrain.at(0).m_sectionIndices[i].m_elements.size());
+
+            }
+            //m_renderPasses[2].NewOnRenderFinish();
         }
 
         m_renderPasses.at(RenderPass.first).NewOnRenderFinish();
@@ -1903,17 +2099,21 @@ void Renderer::Render(const float DeltaTime)
     submitInfo.pWaitSemaphores = waitSemaphores;
     submitInfo.pWaitDstStageMask = waitStages;
 
-    VkCommandBuffer commandBuffers[] = { m_renderPasses.at(0).m_commandBuffer, m_renderPasses.at(1).m_commandBuffer };
+    VkCommandBuffer commandBuffers[] = { m_renderPasses.at(0).m_commandBuffer, m_renderPasses.at(1).m_commandBuffer, m_renderPasses.at(2).m_commandBuffer, m_renderPasses.at(3).m_commandBuffer};
 
-    submitInfo.commandBufferCount = 2;
+    submitInfo.commandBufferCount = 4;
     //submitInfo.pCommandBuffers = &m_renderPasses[0].m_commandBuffer;
     submitInfo.pCommandBuffers = commandBuffers;
 
     VkSemaphore signalSemaphores[] = { m_renderFinishedSemaphore };
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signalSemaphores;
+    
+    VkResult res;
 
-    if (vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, m_inFlightFence) != VK_SUCCESS) {
+    res = vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, m_inFlightFence);
+
+    if (res != VK_SUCCESS) {
         throw std::runtime_error("failed to submit draw command buffer!");
     }
 
@@ -2378,6 +2578,22 @@ void Renderer::TransitionImageLayout(VkImage Image, VkFormat Format, VkImageLayo
 
         sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
         destinationStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+    }
+    else if (OldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && NewLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+    {
+        barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+        sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+        destinationStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+    }
+    else if (OldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && NewLayout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
+    {
+        barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+        sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+        destinationStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
     }
     else {
         throw std::invalid_argument("unsupported layout transition!");

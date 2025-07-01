@@ -186,17 +186,23 @@ struct UniformBufferObject
 {
 	glm::mat4 m_veiwMatrix;
 	glm::mat4 m_projectionMatrix;
+	glm::mat4 m_lightViewMatrix;
 };
+
+constexpr int gImageBufferAmount = 6;
 
 struct UniformTextureBuffer
 {
-	std::array<VkSampler, 5> m_diffuseTextures;
+	std::array<VkSampler, gImageBufferAmount> m_diffuseTextures;
+	VkSampler m_shadowMap;
 	//glm::mat4 m_transform;
 };
 
 struct PushConstant
 {
 	glm::mat4 m_transform;
+	uint32_t m_shadowMapping;
+	uint32_t m_usesTexture;
 };
 
 static std::vector<Vertex> GenerateSphere()
@@ -686,7 +692,7 @@ struct GraphicsRenderPassOptions
 	bool IsShadowMapper;
 };
 
-constexpr int gImageBufferAmount = 6;
+
 
 struct GraphicsRenderPass
 {
@@ -709,13 +715,15 @@ struct GraphicsRenderPass
 		imageAcquiredSemaphore(),
 		m_isShadowMapping(false)
 	{}
-	void Init(const VkPhysicalDevice& PhysicalDevice, const VkDevice &Device, const VkExtent2D& SwapChainExtent, const VkFormat& SwapChainImageFormat, const std::vector<VkImageView>& ImageViews, const std::vector<VkImageView>& ShadowMapImageView, const VkImageView DepthImageView, const VkSurfaceKHR& Surface, const GraphicsRenderPassOptions Options);
+	void Init(const VkPhysicalDevice& PhysicalDevice, const VkDevice &Device, const VkExtent2D& SwapChainExtent, const VkFormat& SwapChainImageFormat, const std::vector<VkImageView>& ImageViews, const std::vector<VkImageView>& ShadowMapImageView, const VkImageView& ShadowDepthImageView, const VkImageView DepthImageView, const VkSurfaceKHR& Surface, const GraphicsRenderPassOptions Options);
 	void CreateRenderPass(const VkPhysicalDevice PhysicalDevice, const VkDevice& Device, const VkFormat& SwapChainImageFormat, const VkAttachmentLoadOp& LoadOp, const VkAttachmentStoreOp& StoreOp);
 	void CreateDescriptorSetLayout(const VkDevice& Device);
+	void CreateComputeDescriptorSetLayout(const VkDevice& Device);
 	void CreateDescriptorSet(const VkDevice& Device);
+	void CreateComputeDescriptorSet(const VkDevice& Device);
 	void CreateUniformBuffer(const VkPhysicalDevice& PhysicalDevice, const VkDevice& Device);
 	void CreateGraphicsPipeline(const VkDevice& Device, const VkExtent2D& SwapChainExtent, const std::string& VertexShader, const std::string& FragmentShader, const VkPrimitiveTopology& Topology);
-	void CreateFrameBuffers(const VkDevice& Device, const std::vector<VkImageView>& ImageViews, const std::vector<VkImageView>& ShadowMapImageView, const VkImageView DepthImageView, const VkExtent2D& SwapChainExtent);
+	void CreateFrameBuffers(const VkDevice& Device, const std::vector<VkImageView>& ImageViews, const std::vector<VkImageView>& ShadowMapImageView, const VkImageView& ShadowDepthImageView, const VkImageView DepthImageView, const VkExtent2D& SwapChainExtent);
 	void CreateCommandPool(const VkPhysicalDevice& PhysicalDevice, const VkDevice& Device, const VkSurfaceKHR& Surface);
 	void CreateCommandBuffer(const VkDevice& Device);
 	void RecordCommandBuffer(const uint32_t ImageIndex, const VkExtent2D& SwapChainExtent);
@@ -727,7 +735,7 @@ struct GraphicsRenderPass
 	void OnRenderStart(const vk::Device& Device, vk::su::SwapChainData& SwapChainData, vk::CommandBuffer& CommandBuffer, vk::su::SurfaceData& SurfaceData);
 	void OnRenderObj(const vk::CommandBuffer& CommandBuffer, const VkBuffer& VertexBuffer, const std::vector<Vertex> VertData, const vk::ResultValue<uint32_t>& ResultValue, const vk::su::SurfaceData& SurfaceData, const int VertexCount);
 	void OnRenderFinish(const vk::ResultValue<uint32_t>& CurrentBuffer, const vk::CommandBuffer& CommandBuffer, const vk::Device& Device, const vk::su::SwapChainData& SwapChainData, const vk::Queue& GraphicsQueue, const vk::Queue& PresentQueue);
-	void NewOnRenderStart(const VkDevice& Device, const uint32_t ImageIndex, const VkExtent2D& SwapChainExtent, const UniformBufferObject BufferObject, const std::array<VkSampler, gImageBufferAmount>& Textures, const std::array<VkImageView, gImageBufferAmount>& ImageViews);
+	void NewOnRenderStart(const VkDevice& Device, const uint32_t ImageIndex, const VkExtent2D& SwapChainExtent, const UniformBufferObject BufferObject, const std::array<VkSampler, gImageBufferAmount>& Textures, const std::array<VkImageView, gImageBufferAmount>& ImageViews, const VkImageView& ShadowMapImageView);
 	void NewOnRendorObjBegin(const VkBuffer& VertexBuffer, const VkBuffer& IndexBuffer);
 	void NewOnRendorObj(const int VertAmount, const PushConstant& Uniform, const int IndexAmount);
 	void NewOnRenderFinish();
@@ -788,6 +796,9 @@ struct RenderObjectQueue
 	std::unordered_map<unsigned int, RenderObjectSubQueue> m_mainObjectRenderQueue;
 };
 
+constexpr float gNearPlane = 0.1f;
+constexpr float gFarPlane = 1000.f;
+
 class Renderer : public RendererSpec
 {
 public:
@@ -824,6 +835,7 @@ public:
 	void AddToRenderQueue(const unsigned int RenderPass, const Vector3& Pos, const unsigned int ModelID) override final;
 	glm::mat4 BuildMatrix(const Vector3& Position, const Vector3& Rotation);
 	void PositionCamera(const Vector3& Position, const Vector3& Rotation) override final;
+	void PositionLight(const Vector3& Position, const Vector3& Rotation);
 	void Render(const float DeltaTime) override final;
 	bool WindowShouldClose() const override final;
 	void PollEvents() override final;
@@ -870,6 +882,10 @@ public:
 	std::vector<VkDeviceMemory> m_shadowMapImagesMemory;
 	std::vector<VkImageView> m_shadowMapImageViews;
 
+	VkImage m_shadowMapDepthImage;
+	VkDeviceMemory m_shadowMapDepthMemory;
+	VkImageView m_shadowMapDepthImageView;
+
 	VkImage depthImage;
 	VkDeviceMemory depthImageMemory;
 	VkImageView depthImageView;
@@ -890,6 +906,7 @@ public:
 	std::array<VkSampler, gImageBufferAmount> m_samplers;
 	//GuiRenderPass m_guiPass;
 	glm::mat4x4 m_camMatrix = glm::mat4x4(1);
+	glm::mat4 m_lightMatrix = glm::mat4(1);
 	ImGui_ImplVulkanH_Window mainWindowData;
 	VkSemaphore m_imageAvailableSemaphore;
 	VkSemaphore m_renderFinishedSemaphore;
