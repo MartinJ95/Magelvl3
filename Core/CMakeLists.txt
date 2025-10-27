@@ -1,14 +1,9 @@
 project(Core)
 
-set(cur_path ${PROJECT_SOURCE_DIR})
-cmake_path(GET cur_path PARENT_PATH parent_path)
-
 include_directories(
         ${PROJECT_SOURCE_DIR}/include
         ${PROJECT_SOURCE_DIR}/src
-	${parent_path}/Graphics/include/tinyobjloader-release
 	${additional_includes}
-
 )
 
 file(GLOB all_SRCS
@@ -20,3 +15,4 @@ file(GLOB all_SRCS
 
 add_library(Core ${all_SRCS})
 target_link_libraries(Core Graphics Physics)
+target_include_directories(Core INTERFACE ${PROJECT_SOURCE_DIR}/include ${PROJECT_SOURCE_DIR}/src)

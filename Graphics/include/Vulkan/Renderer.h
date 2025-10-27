@@ -11,6 +11,10 @@
 #include "../samples/utils/shaders.hpp"
 #include "../samples/utils/utils.hpp"
 
+#define GLM_ENABLE_EXPERIMENTAL
+
+#include "glm/glm.hpp"
+
 
 #include "glslang/SPIRV/GlslangToSpv.h"
 #include "glslang/Public/ShaderLang.h"
@@ -19,8 +23,8 @@
 
 
 #include "imgui.h"
-#include "imgui-1.91.8/backends/imgui_impl_glfw.h"
-#include "imgui-1.91.8/backends/imgui_impl_vulkan.h"
+#include "backends/imgui_impl_glfw.h"
+#include "backends/imgui_impl_vulkan.h"
 
 #include <iostream>
 #include <thread>
@@ -28,6 +32,8 @@
 #include <stack>
 #include <fstream>
 #include <optional>
+
+#include <unordered_map>
 
 #ifndef TINYOBJLOADER_IMPLEMENTATION
 #define TINYOBJLOADER_IMPLEMENTATION
@@ -388,7 +394,7 @@ struct GraphicsModel
 		VkMemoryRequirements memRequirements;
 		vkGetBufferMemoryRequirements(Device, m_vertexBuffer, &memRequirements);
 
-		auto& findMemoryType = [&](uint32_t typeFilter, VkMemoryPropertyFlags properties) -> uint32_t {
+		auto findMemoryType = [&](uint32_t typeFilter, VkMemoryPropertyFlags properties) -> uint32_t {
 			VkPhysicalDeviceMemoryProperties memProperties;
 			vkGetPhysicalDeviceMemoryProperties(PhysicalDevice, &memProperties);
 
@@ -443,7 +449,7 @@ struct GraphicsModel
 
 		VkMemoryRequirements memRequirements;
 		vkGetBufferMemoryRequirements(Device, m_indexBuffer, &memRequirements);
-		auto& findMemoryType = [&](uint32_t typeFilter, VkMemoryPropertyFlags properties) -> uint32_t {
+		auto findMemoryType = [&](uint32_t typeFilter, VkMemoryPropertyFlags properties) -> uint32_t {
 			VkPhysicalDeviceMemoryProperties memProperties;
 			vkGetPhysicalDeviceMemoryProperties(PhysicalDevice, &memProperties);
 
@@ -547,7 +553,7 @@ struct TerrainSubIndices
 
 		VkMemoryRequirements memRequirements;
 		vkGetBufferMemoryRequirements(Device, m_indexBuffer, &memRequirements);
-		auto& findMemoryType = [&](uint32_t typeFilter, VkMemoryPropertyFlags properties) -> uint32_t {
+		auto findMemoryType = [&](uint32_t typeFilter, VkMemoryPropertyFlags properties) -> uint32_t {
 			VkPhysicalDeviceMemoryProperties memProperties;
 			vkGetPhysicalDeviceMemoryProperties(PhysicalDevice, &memProperties);
 

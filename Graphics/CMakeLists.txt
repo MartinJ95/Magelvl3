@@ -1,15 +1,9 @@
 project(Graphics)
 
-include_directories(
-        ${PROJECT_SOURCE_DIR}/include
-	${PROJECT_SOURCE_DIR}/include/tinyobjloader-release
-	${PROJECT_SOURCE_DIR}/src
-	${PROJECT_SOURCE_DIR}/Resources/include
-	${additional_includes}
-)
+include(FetchContent)
 
-link_directories(
-	${PROJECT_SOURCE_DIR}/Resources/lib
+FetchContent_MakeAvailable(
+	tinyObj ImGUI Vulkan stb
 )
 
 set(all_files 
@@ -25,15 +19,15 @@ list(APPEND all_files
         "${PROJECT_SOURCE_DIR}/include/vulkan/*.hpp"
 	"${PROJECT_SOURCE_DIR}/src/vulkan/*.cpp"
     "${PROJECT_SOURCE_DIR}/src/vulkan/*.c"
-	"${PROJECT_SOURCE_DIR}/Resources/include/imgui-1.91.8/backends/imgui_impl_glfw.cpp"
-	"${PROJECT_SOURCE_DIR}/Resources/include/imgui-1.91.8/backends/imgui_impl_vulkan.cpp"
-	"${PROJECT_SOURCE_DIR}/Resources/include/imgui-1.91.8/backends/imgui_impl_win32.cpp"
-	"${PROJECT_SOURCE_DIR}/Resources/include/imgui-1.91.8/imgui_tables.cpp"
-	"${PROJECT_SOURCE_DIR}/Resources/include/imgui-1.91.8/imgui_widgets.cpp"
-	"${PROJECT_SOURCE_DIR}/Resources/include/imgui-1.91.8/imgui_draw.cpp"
-	"${PROJECT_SOURCE_DIR}/Resources/include/imgui-1.91.8/imgui_demo.cpp"
-	"${PROJECT_SOURCE_DIR}/Resources/include/imgui-1.91.8/misc/cpp/imgui_stdlib.cpp"
-	"${PROJECT_SOURCE_DIR}/Resources/include/imgui-1.91.8/imgui.cpp"
+	"${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp"
+	"${imgui_SOURCE_DIR}/backends/imgui_impl_vulkan.cpp"
+	"${imgui_SOURCE_DIR}/backends/imgui_impl_win32.cpp"
+	"${imgui_SOURCE_DIR}/imgui_tables.cpp"
+	"${imgui_SOURCE_DIR}/imgui_widgets.cpp"
+	"${imgui_SOURCE_DIR}/imgui_draw.cpp"
+	"${imgui_SOURCE_DIR}/imgui_demo.cpp"
+	"${imgui_SOURCE_DIR}/misc/cpp/imgui_stdlib.cpp"
+	"${imgui_SOURCE_DIR}/imgui.cpp"
 )
 elseif("${graphics_to_use}" STREQUAL "none")
 list(APPEND all_files
@@ -51,14 +45,14 @@ file(GLOB all_SRCS
 if("${graphics_to_use}" STREQUAL "vulkan")
 
 	find_package(Vulkan REQUIRED)
-	add_subdirectory(Resources/Vulkan-Hpp/glm EXCLUDE_FROM_ALL)
 
 	add_library(Graphics ${all_SRCS})
-	target_link_libraries(Graphics glfw3 glslangd glslang-default-resource-limitsd SPIRVd MachineIndependentd OGLCompilerd OSDependentd GenericCodeGend Vulkan::Vulkan glm utils Utilities)
+	target_link_libraries(Graphics glfw glslang Vulkan::Vulkan glm utils Utilities Physics)
+	target_include_directories( Graphics PUBLIC include src include/Vulkan src/Vulkan ${tinyobj_SOURCE_DIR} ${imgui_SOURCE_DIR} ${vulkan_SOURCE_DIR}/Vulkan-Headers ${vulkan_SOURCE_DIR}/glfw/include ${vulkan_SOURCE_DIR}/glm/glm ${stb_SOURCE_DIR})
 
 elseif("${graphics_to_use}" STREQUAL "none")
 
 	add_library(Graphics ${all_SRCS})
-	target_link_libraries(Utilities)
+	target_link_libraries(Graphics PUBLIC Utilities)
 
 endif()

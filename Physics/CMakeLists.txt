@@ -1,11 +1,5 @@
 project(Physics)
 
-include_directories(
-        ${PROJECT_SOURCE_DIR}/include
-        ${PROJECT_SOURCE_DIR}/src
-	${additional_includes}
-)
-
 file(GLOB all_SRCS
         "${PROJECT_SOURCE_DIR}/include/*.h"
         "${PROJECT_SOURCE_DIR}/include/*.hpp"
@@ -15,3 +9,4 @@ file(GLOB all_SRCS
 
 add_library(Physics ${all_SRCS})
 target_link_libraries(Physics Utilities)
+target_include_directories(Physics PUBLIC include src)

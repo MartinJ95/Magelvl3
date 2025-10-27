@@ -2,8 +2,11 @@
 #include "ECS.h"
 #include "Transform.h"
 #include "PhysicsBase.h"
-#include "imgui-1.91.8/misc/cpp/imgui_stdlib.h"
+#include "misc/cpp/imgui_stdlib.h"
 #include <map>
+#include <set>
+
+#include <glm/common.hpp>
 
 #include <cstdint> // Necessary for uint32_t
 #include <limits> // Necessary for std::numeric_limits
@@ -12,7 +15,7 @@
 #include "tiny_obj_loader.h"
 
 #define STB_IMAGE_IMPLEMENTATION
-#include <stb-master/stb-master/stb_image.h>
+#include <stb_image.h>
 
 void (*InputFunction)(int, int, int, int) = NULL;
 
@@ -70,12 +73,13 @@ Renderer::Renderer(int Width, int Height) :
 #endif
         //vk::su::copyToDevice(m_device, m_modelDatas.at(0).m_vertexBufferData.deviceMemory, coloredCubeData, sizeof(coloredCubeData) / sizeof(coloredCubeData[0]));
     }
-
+    /*
     catch (vk::SystemError& err)
     {
         std::cout << "vk::SystemError: " << err.what() << std::endl;
         exit(-1);
     }
+    */
     catch (std::exception& err)
     {
         std::cout << "std::exception: " << err.what() << std::endl;
@@ -275,12 +279,12 @@ void Renderer::Init()
     info.Device = m_device;
     //info.DescriptorPool = m_renderPasses[0].m_descriptorPool;
     info.DescriptorPoolSize = 3;
-    info.RenderPass = m_renderPasses[0].m_renderPass;
+    //info.RenderPass = m_renderPasses[0].m_renderPass;
     info.MinImageCount = 3;
     info.ImageCount = 3;
     info.QueueFamily = m_graphicsAndPresentQueueFamilyIndex.first;
     info.Queue = m_graphicsQueue;
-    info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+    //info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 
 
     //will bring back
@@ -2882,7 +2886,6 @@ GuiRenderPass::GuiRenderPass(const vk::PhysicalDevice& PhysicalDevice, const vk:
 
 bool Mesh::LoadFromObj(const char* filename, std::vector<std::vector<Vertex>>& verts, std::vector<std::vector<uint16_t>>& elements)
 {
-
     tinyobj::ObjReaderConfig reader_config;
     reader_config.mtl_search_path = "./";
 

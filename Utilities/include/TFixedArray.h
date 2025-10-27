@@ -72,11 +72,11 @@ inline void TFixedArray<T, S>::Remove(const T& Val)
 {
 	for (int i = 0; i < m_size; i++)
 	{
-		if (m_data[i] != Val)
+		if (m_Data[i] != Val)
 			continue;
 
 		if (i < m_size-1)
-			std::swap(m_data[i], m_data[m_size-1]);
+			std::swap(m_Data[i], m_Data[m_size-1]);
 
 		m_size--;
 		return;
