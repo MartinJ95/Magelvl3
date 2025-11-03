@@ -11,7 +11,6 @@ layout(binding = 0) uniform UniformBufferObject {
 
 layout(push_constant) uniform Push {
 	mat4 mvp;
-	bool shadowMapped;
 	bool usesTexture;
 } push;
 
@@ -32,10 +31,6 @@ layout(location = 4) out vec4 inUnmoddedPosition;
 void main()
 {
 	mat4 view = ubo.view;
-	if(push.shadowMapped)
-	{
-		view = ubo.lightView;
-	}
 	outPos = vec3(push.mvp * vec4(pos.xyz, 1.0f));
 	//outPos = push.mvp * vec4(pos.xyz, 1.0f);
 	outColor = inColor;

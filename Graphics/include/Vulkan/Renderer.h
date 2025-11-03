@@ -188,6 +188,11 @@ struct TextureData
 	VkDeviceMemory textureImageMemory;
 };
 
+struct ShadowUniformBufferObject
+{
+	glm::mat4 m_shadowModelViewProj;
+};
+
 struct UniformBufferObject
 {
 	glm::mat4 m_veiwMatrix;
@@ -207,7 +212,6 @@ struct UniformTextureBuffer
 struct PushConstant
 {
 	glm::mat4 m_transform;
-	uint32_t m_shadowMapping;
 	uint32_t m_usesTexture;
 };
 
@@ -698,7 +702,123 @@ struct GraphicsRenderPassOptions
 	bool IsShadowMapper;
 };
 
+constexpr float gNearPlane = 0.1f;
+constexpr float gFarPlane = 1000.f;
 
+static glm::mat4 GetViewProjectionMatrix(const VkExtent2D& SurfaceExtent, const glm::mat4& CamMatrix)
+{
+	//glm::mat4x4 testMat = vk::su::createModelViewProjectionClipMatrix(SurfaceExtent);
+
+	glm::mat4x4 viewMatrix = glm::inverse(CamMatrix);
+
+	glm::mat4x4 xMatrix = glm::inverse(
+		glm::mat4x4(
+			1, 0, 0, 0,
+			0, -1, 0, 0,
+			0, 0, -1, 0,
+			0, 0, 0, 1
+		)
+	);
+
+	float aspectRatio = SurfaceExtent.width / SurfaceExtent.height;
+
+	float fov = 45;
+
+	std::pair<float, float> nearfarplanes{ 0.1f,100.f };
+
+	glm::mat4x4 projectionMatrix = glm::perspective(fov, aspectRatio, nearfarplanes.first, nearfarplanes.second);
+	/*
+	glm::mat4x4 projectionMatrix = glm::mat4x4(
+		aspectRatio/tan(fov*0.5), 0, 0, 0,
+		0, 1/tan(fov*0.5), 0, 0,
+		0, 0, nearfarplanes.second/ nearfarplanes.first - nearfarplanes.second, -(nearfarplanes.first*nearfarplanes.second / nearfarplanes.second-nearfarplanes.first),
+		0, 0, 1, 0
+	);
+	*/
+
+	glm::mat4 projectionViewMatrix = projectionMatrix * xMatrix * viewMatrix;
+
+	return projectionViewMatrix;
+}
+
+static glm::mat4 GetProjectionMatrix(const VkExtent2D& SurfaceExtent)
+{
+	float aspectRatio = SurfaceExtent.width / SurfaceExtent.height;
+
+	float fov = 45.f;
+
+	std::pair<float, float> nearFarPlanes{ gNearPlane, gFarPlane };
+
+	glm::mat4 projectionMatrix = glm::perspective(fov, aspectRatio, nearFarPlanes.first, nearFarPlanes.second);
+
+	return projectionMatrix;
+}
+static glm::mat4 GetViewMatrix(const glm::mat4& CamMatrix)
+{
+
+	glm::mat4 viewMatrix = glm::inverse(CamMatrix);
+
+	glm::mat4x4 xMatrix = glm::inverse(
+		glm::mat4x4(
+			1, 0, 0, 0,
+			0, -1, 0, 0,
+			0, 0, -1, 0,
+			0, 0, 0, 1
+		)
+	);
+
+
+	return xMatrix * viewMatrix;
+}
+
+static VkShaderModule NewCreateShaderModule(const VkDevice& Device, const std::vector<char>& Code)
+{
+	VkShaderModuleCreateInfo createInfo{};
+	createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+	createInfo.codeSize = Code.size();
+	createInfo.pCode = reinterpret_cast<const uint32_t*>(Code.data());
+
+	VkShaderModule shaderModule;
+	if (vkCreateShaderModule(Device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
+		throw std::runtime_error("failed to create shader module!");
+	}
+
+	return shaderModule;
+}
+
+struct GraphicsShadowPass
+{
+public:
+	void Init(const VkPhysicalDevice PhysicalDevice, const VkDevice Device, const VkExtent2D& SwapChainExtent, const VkFormat& SwapChainImageFormat, const std::vector<VkImageView>& ImageViews, const VkImageView& ShadowDepthImageView, const VkSurfaceKHR& Surface, const GraphicsRenderPassOptions Options);
+	void CreateRenderPass(const VkPhysicalDevice PhysicalDevice, const VkDevice& Device, const VkFormat& SwapChainImageFormat, const VkAttachmentLoadOp& LoadOp, const VkAttachmentStoreOp StoreOp);
+	void CreateDescriptorSetLayout(const VkDevice& Device);
+	void CreateDescriptorSet(const VkDevice& Device);
+	void CreateUniformBuffer(const VkPhysicalDevice& PhysicalDevice, const VkDevice& Device);
+	void CreateGraphicsPipeline(const VkDevice& Device, const VkExtent2D& SwapChainExtent, const std::string& VertexShader, const std::string& FragmentShader, const VkPrimitiveTopology& Topology);
+	void CreateFrameBuffers(const VkDevice& Device, const std::vector<VkImageView>& ImageViews, const VkImageView& ShadowDepthImageView, const VkExtent2D& SwapChainExtent);
+	void CreateCommandPool(const VkPhysicalDevice& PhysicalDevice, const VkDevice& Device, const VkSurfaceKHR& Surface);
+	void CreateCommandBuffer(const VkDevice& Device);
+	void NewOnRenderStart(const VkDevice& Device, const uint32_t ImageIndex, const VkExtent2D& SwapChainExtent, const ShadowUniformBufferObject BufferObject, const std::array<VkSampler, gImageBufferAmount>& Textures, const std::array<VkImageView, gImageBufferAmount>& ImageViews, const VkImageView& ShadowMapImageView);
+	void NewOnRendorObjBegin(const VkBuffer& VertexBuffer, const VkBuffer& IndexBuffer);
+	void NewOnRendorObj(const int VertAmount, const PushConstant& Uniform, const int IndexAmount);
+	void NewOnRenderFinish();
+public:
+	VkRenderPass m_renderPass;
+	VkDescriptorSetLayout m_descriptorSetLayout;
+	VkDescriptorPool m_descriptorPool;
+	VkDescriptorSet m_uniformDescriptorSet;
+	VkBuffer m_uniformBuffer;
+	VkDeviceMemory m_uniformBufferMemory;
+	std::vector<void*> m_uniformBuffersMapped;
+	VkShaderModule m_vertexShaderModule;
+	VkShaderModule m_fragmentShaderModule;
+	VkPipelineLayout m_pipelineLayout;
+	VkPipelineCache m_pipelineCache;
+	VkPipeline m_pipeline;
+	std::vector<VkFramebuffer> m_frameBuffers;
+	VkCommandPool m_commandPool;
+	VkCommandBuffer m_commandBuffer;
+};
 
 struct GraphicsRenderPass
 {
@@ -734,13 +854,6 @@ struct GraphicsRenderPass
 	void CreateCommandBuffer(const VkDevice& Device);
 	void RecordCommandBuffer(const uint32_t ImageIndex, const VkExtent2D& SwapChainExtent);
 	VkShaderModule CreateShaderModule(const VkDevice& Device, const std::vector<char>& Code);
-	glm::mat4 GetViewProjectionMatrix(const VkExtent2D& SurfaceExtent, const glm::mat4& CamMatrix);
-	glm::mat4 GetProjectionMatrix(const VkExtent2D& SurfaceExtent);
-	glm::mat4 GetViewMatrix(const glm::mat4& CamMatrix);
-	void SetUniformDataModelViewProjection(const glm::mat4& projectionViewMatrix,const vk::su::SurfaceData& SurfaceData, const vk::PhysicalDevice& PhysicalDevice, const vk::Device& Device, const glm::mat4x4& ModelMatrix, const glm::mat4x4& CamMatrix, const bool ShouldUpdate);
-	void OnRenderStart(const vk::Device& Device, vk::su::SwapChainData& SwapChainData, vk::CommandBuffer& CommandBuffer, vk::su::SurfaceData& SurfaceData);
-	void OnRenderObj(const vk::CommandBuffer& CommandBuffer, const VkBuffer& VertexBuffer, const std::vector<Vertex> VertData, const vk::ResultValue<uint32_t>& ResultValue, const vk::su::SurfaceData& SurfaceData, const int VertexCount);
-	void OnRenderFinish(const vk::ResultValue<uint32_t>& CurrentBuffer, const vk::CommandBuffer& CommandBuffer, const vk::Device& Device, const vk::su::SwapChainData& SwapChainData, const vk::Queue& GraphicsQueue, const vk::Queue& PresentQueue);
 	void NewOnRenderStart(const VkDevice& Device, const uint32_t ImageIndex, const VkExtent2D& SwapChainExtent, const UniformBufferObject BufferObject, const std::array<VkSampler, gImageBufferAmount>& Textures, const std::array<VkImageView, gImageBufferAmount>& ImageViews, const VkImageView& ShadowMapImageView);
 	void NewOnRendorObjBegin(const VkBuffer& VertexBuffer, const VkBuffer& IndexBuffer);
 	void NewOnRendorObj(const int VertAmount, const PushConstant& Uniform, const int IndexAmount);
@@ -759,7 +872,6 @@ public:
 	std::vector<VkFramebuffer> m_frameBuffers;
 	VkPipelineLayout m_pipelineLayout;
 	VkDescriptorSetLayout m_descriptorSetLayout;
-	VkPipelineLayout m_pipeLineLayout;
 	VkDescriptorPool m_descriptorPool;
 	uint32_t m_descriptorPoolSize;
 	VkDescriptorSet m_uniformDescriptorSet;
@@ -802,9 +914,6 @@ struct RenderObjectQueue
 	std::unordered_map<unsigned int, RenderObjectSubQueue> m_mainObjectRenderQueue;
 };
 
-constexpr float gNearPlane = 0.1f;
-constexpr float gFarPlane = 1000.f;
-
 class Renderer : public RendererSpec
 {
 public:
@@ -817,6 +926,7 @@ public:
 	void CreateSurface();
 	void CreateImageViews();
 	void CreateShadowMapImageViews();
+	void CreateViewportImageVies();
 	void CreateGraphicsPipeline();
 	static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
 		VkDebugUtilsMessageSeverityFlagBitsEXT MessageSeverity,
@@ -881,12 +991,19 @@ public:
 	VkQueue m_graphicsQueue;
 	VkQueue m_presentQueue;
 	VkSwapchainKHR m_swapChain;
+
+	std::vector<VkImage> m_viewportImages;
+	std::vector<VkImageView> m_viewportImageViews;
+	std::vector<VkDeviceMemory> m_viewportImageMemory;
+
 	std::vector<VkImage> m_swapChainImages;
 	std::vector<VkImageView> m_swapChainImageViews;
 
 	std::vector<VkImage> m_shadowMapImages;
 	std::vector<VkDeviceMemory> m_shadowMapImagesMemory;
 	std::vector<VkImageView> m_shadowMapImageViews;
+
+	VkDescriptorSet m_viewportDescriptorSet;
 
 	VkImage m_shadowMapDepthImage;
 	VkDeviceMemory m_shadowMapDepthMemory;
@@ -904,8 +1021,11 @@ public:
 	* key = graphics model
 	* value = transform matrix
 	*/
+	std::unordered_map<unsigned int, RenderObjectQueue> m_shadowTargets;
 	std::unordered_map<unsigned int, RenderObjectQueue> m_renderingTargets;
 	std::unordered_map<unsigned int, GraphicsRenderPass> m_renderPasses;
+	std::unordered_map<unsigned int, GraphicsShadowPass> m_shadowPasses;
+	GraphicsRenderPass m_guiPass;
 	std::unordered_map<unsigned int, VkImage> m_imageDatas;
 	std::unordered_map<unsigned int, VkDeviceMemory> m_imageMemory;
 	std::array<VkImageView, gImageBufferAmount> m_imageVeiws;
